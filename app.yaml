@@ -3,6 +3,9 @@ version: 1
 runtime: python
 api_version: 1
 
+builtins:
+- remote_api: on
+
 handlers:
 - url: /images
   static_dir: images
@@ -18,11 +21,6 @@ handlers:
 - url: /(.*\.js)
   static_files: \1
   upload: .*\.js
-
-# Enable if upload.
-- url: /remote_api
-  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
-  login: admin
 
 - url: /admin/.*
   script: admin.py

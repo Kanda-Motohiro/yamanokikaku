@@ -55,6 +55,13 @@ class Kikaku(db.Model):
            self.leaders, self.members)
 # end class
 
+def imanoKikakuItiran():
+    "今の山行企画一覧をHTMLで返す。"
+    out = []
+    for rec in Kikaku:
+        out.append(unicode(rec))
+    return "<br>\n".join(out)
+
 #
 # handlers
 #
@@ -71,8 +78,17 @@ class MainPage(webapp.RequestHandler):
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
         self.response.out.write(template.render("templates/main.tmpl", template_values))
 
+class InitLoad(webapp.RequestHandler):
+    def get(self):
+        rec = Kikaku(no = 243, title = u"薬師岳、雲の平", rank = "C-C-8.5",
+            start = 0, end = 0, shimekiri = 0, teiin = 10,
+            leaders = u"大友、三浦")
+        rec.put()
+
+            
 application = webapp.WSGIApplication([
-    ('/', MainPage)
+    ('/', MainPage),
+    ('/initload', InitLoad)
     ], debug=True)
 
 def main():
