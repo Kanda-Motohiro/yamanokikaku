@@ -1,0 +1,38 @@
+application: yamanokikaku
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: /images
+  static_dir: images
+
+- url: /(.*\.htm)
+  static_files: \1
+  upload: .*\.htm
+
+- url: /(.*\.html)
+  static_files: \1
+  upload: .*\.html
+
+- url: /(.*\.js)
+  static_files: \1
+  upload: .*\.js
+
+# Enable if upload.
+- url: /remote_api
+  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
+  login: admin
+
+- url: /admin/.*
+  script: admin.py
+  login: admin
+
+- url: /_ah/login_required
+  script: do_openid_login.py
+
+- url: .*
+  script: main.py
+#  login: required
+
+# eof
