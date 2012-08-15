@@ -2,22 +2,15 @@
 # encoding=utf-8
 # http://yamanokikaku.appspot.com/main.py
 # Copyright (c) 2008, 2012 Kanda.Motohiro@gmail.com
-import logging
-import traceback
+
 import wsgiref.handlers
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext import db
 from google.appengine.api import users
 import os
-
-if __debug__:
-    def dbgprint(*args):
-        items = list(traceback.extract_stack()[-2][:3])
-        items[0] = os.path.basename(items[0])
-        logging.debug(str(items) + str(args))
-else:
-    def dbgprint(*args): pass
+import datetime
+from util import *
 
 # use django 1.1 if possible
 # http://code.google.com/intl/ja/appengine/docs/python/tools/libraries.html
@@ -39,26 +32,30 @@ class Kikaku(db.Model):
     no = db.IntegerProperty(required=True) # No. 243
     title = db.StringProperty(required=True) # 薬師岳、雲の平
     rank = db.StringProperty() # C-C-8.5
-    start = db.DateTimeProperty(required=True) # 8/8
-    end = db.DateTimeProperty() # 8/12
-    shimekiri = db.DateTimeProperty(required=True) # 締切日 6/24
+    start = db.DateProperty(required=True) # 8/8
+    end = db.DateProperty() # 8/12
+    shimekiri = db.DateProperty(required=True) # 締切日 6/24
     teiin = db.IntegerProperty() # 定員　１０人
-    leaders = db.ListProperty(db.String) # リーダー　大友、三浦
-    members = db.ListProperty(db.String)
+    leaders = db.StringListProperty() # リーダー　大友、三浦
+    members = db.StringListProperty()
 
     def __repr__(self):
-        s = self.start
-        e = self.end
+        leaders = ",".join(self.leaders)
+        members = ""
+
         return u"No.%d %s %s 期日:%s-%s 締切日:%s 定員:%d人<br>\
         リーダー:%s メンバー:%s" % \
-           (self.no, self.title, self.rank, s, e, self.shimekiri, self.teiin,
-           self.leaders, self.members)
+           (self.no, self.title, self.rank, date2Tukihi(self.start),
+           date2Tukihi(self.end), date2Tukihi(self.shimekiri), self.teiin,
+           leaders, members)
 # end class
 
 def imanoKikakuItiran():
     "今の山行企画一覧をHTMLで返す。"
     out = []
-    for rec in Kikaku:
+    query =  db.GqlQuery("""SELECT * FROM Kikaku ORDER BY no DESC""")
+
+    for rec in query:
         out.append(unicode(rec))
     return "<br>\n".join(out)
 
@@ -73,6 +70,9 @@ class MainPage(webapp.RequestHandler):
         else:
             body = u'<a href="%s">ログアウト</a><br>' % \
                 users.create_logout_url(self.request.uri)
+
+        body += imanoKikakuItiran()
+
         template_values = { 'body': u"工事中。<br>" + body, }
         # ところで、app.yaml に、テンプレートを static と書いてはいけない。
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
@@ -80,14 +80,30 @@ class MainPage(webapp.RequestHandler):
 
 class InitLoad(webapp.RequestHandler):
     def get(self):
+        dbgprint("InitLoad")
         rec = Kikaku(no = 243, title = u"薬師岳、雲の平", rank = "C-C-8.5",
-            start = 0, end = 0, shimekiri = 0, teiin = 10,
-            leaders = u"大友、三浦")
+            start = tukihi2Date(u"8月8日"), end = tukihi2Date(u"8月12日"),
+            shimekiri = tukihi2Date(u"6月24日"), teiin = 10,
+            leaders = [u"大友", u"三浦"])
         rec.put()
 
+        rec = Kikaku(no = 245, title = u"御岳山滝巡り", rank = "A-B-3.5",
+            start = tukihi2Date(u"7月1日"), end = tukihi2Date(u"7月1日"),
+            shimekiri = tukihi2Date(u"6月28日"), teiin = 0,
+            leaders = [u"田辺", u"居関"])
+        rec.put()
+        self.response.out.write('<html><body>done</body></html>')
+
+class DeleteAll(webapp.RequestHandler):
+    def get(self):
+        for rec in Kikaku.all():
+            db.delete(rec)
+
+        self.response.out.write('<html><body>delete done</body></html>')
             
 application = webapp.WSGIApplication([
     ('/', MainPage),
+    ('/deleteall', DeleteAll),
     ('/initload', InitLoad)
     ], debug=True)
 
