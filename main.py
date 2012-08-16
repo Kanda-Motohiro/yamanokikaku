@@ -3,6 +3,12 @@
 # http://yamanokikaku.appspot.com/main.py
 # Copyright (c) 2008, 2012 Kanda.Motohiro@gmail.com
 
+"""todo
+エクセルファイルから、CSVにして、バルクロード。
+openid nickname から、会員番号にする。
+こんにちわ https://me.yahoo.co.jp/a/OivdX2luJ7QBA6dN6NksAguJIZUPFCbaOOM- さん。
+http://blairconrad.wordpress.com/ server error on openid login
+"""
 import wsgiref.handlers
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
@@ -41,39 +47,136 @@ class Kikaku(db.Model):
 
     def __repr__(self):
         leaders = ",".join(self.leaders)
-        members = ""
+        if 0 < len(self.members):
+            members = ",".join(self.members)
+        else:
+            members = u""
 
-        return u"No.%d %s %s 期日:%s-%s 締切日:%s 定員:%d人<br>\
+        # 定員、なし。いくらでも受付可能というのは、イレギュラーなので注意。
+        if self.teiin == 0:
+            teiin = u"なし"
+        else:
+            teiin = u"%d人" % self.teiin
+        if self.start == self.end:
+            end = ""
+        else:
+            end = u"-" + date2Tukihi(self.end)
+
+        return u"No.%d %s %s 期日:%s%s 締切日:%s 定員:%s<br>\
         リーダー:%s メンバー:%s" % \
            (self.no, self.title, self.rank, date2Tukihi(self.start),
-           date2Tukihi(self.end), date2Tukihi(self.shimekiri), self.teiin,
+           end, date2Tukihi(self.shimekiri), teiin,
            leaders, members)
 # end class
 
 def imanoKikakuItiran():
-    "今の山行企画一覧をHTMLで返す。"
+    "今の山行企画一覧をリストで返す。"
     out = []
     query =  db.GqlQuery("""SELECT * FROM Kikaku ORDER BY no DESC""")
 
     for rec in query:
         out.append(unicode(rec))
-    return "<br>\n".join(out)
+    return out
+
+def getUserAndKey(handler):
+    """申し込みとキャンセルで使われる、ユーザーと企画のキーを返す。
+    実は、ニックネームと、データベースレコードの参照になったもの。"""
+    user = users.get_current_user()
+    if not user:
+        logerr("no user")
+        return None, None
+
+    key = handler.request.get('key')
+    if not key:
+        logerr("no key")
+        return None, None
+
+    try:
+        rec = db.get(key)
+    except db.BadKeyError:
+        logerr("bad key", key)
+        return None, None
+
+    return user.nickname(), rec
 
 #
 # handlers
 #
+class Apply(webapp.RequestHandler):
+    def get(self):
+        "山行企画に申し込む。企画のキーが渡る。"
+        user, rec = getUserAndKey(self)
+        if user is None:
+            err("invalid user/key")
+            return
+
+        if user in rec.members:
+            err("dup user")
+            return
+
+        # 参加者一覧に、このユーザーを追加する。
+        rec.members.append(user)
+        rec.put()
+        dbgprint("%s applied for %s" % (user, rec.title))
+        self.redirect("/")
+
+class Cancel(webapp.RequestHandler):
+    def get(self):
+        "山行企画の申し込みをキャンセルする。"
+        user, rec = getUserAndKey(self)
+        if user is None:
+            err("invalid user/key")
+            return
+
+        if not user in rec.members:
+            err("no user")
+            return
+
+        # 参加者一覧から、このユーザーを削除する。
+        i = rec.members.index(user)
+        del rec.members[i]
+        rec.put()
+        dbgprint("%s canceled for %s" % (user, rec.title))
+        self.redirect("/")
+
 class MainPage(webapp.RequestHandler):
     def get(self):
         user = users.get_current_user()
         if not user:
             body = u"<a href='/_ah/login_required'>ログイン</a><br>"
         else:
-            body = u'<a href="%s">ログアウト</a><br>' % \
-                users.create_logout_url(self.request.uri)
+            body = u'こんにちわ %s さん。<a href="%s">ログアウト</a><br>' % \
+                (user.nickname(),
+                users.create_logout_url(self.request.uri))
 
-        body += imanoKikakuItiran()
+        # 山行企画を表示し、申し込みとキャンセルのリンクをつける。
+        query =  db.GqlQuery("""SELECT * FROM Kikaku ORDER BY no DESC""")
 
-        template_values = { 'body': u"工事中。<br>" + body, }
+        kikakuList = []
+        for rec in query:
+            moushikomi = ""
+            # 自分の申し込みは、取り消せる。
+            # 同じ所に２度、申し込みはできない。
+            if user and user.nickname() in rec.members:
+                moushikomi = u"<a href=/cancel?key=%s>取り消す</a>" % rec.key()
+
+            # 締切日をすぎていれば、申し込みは表示しない。
+            #elif rec.shimekiri < datetime.date.today():
+            #    moushikomi = ""
+
+            # 定員を超えていれば、おなじく。
+            # 定員ゼロは、無限に受付。
+            elif rec.teiin != 0 and rec.teiin <= len(rec.members):
+                moushikomi = ""
+            elif user:
+                moushikomi = u"<a href=/apply?key=%s>申し込む</a>" % rec.key()
+            
+            kikakuList.append(unicode(rec) + " " + moushikomi)
+
+        body += "<br>\n".join(kikakuList)
+
+        template_values = { 'body': body, }
+
         # ところで、app.yaml に、テンプレートを static と書いてはいけない。
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
         self.response.out.write(template.render("templates/main.tmpl", template_values))
@@ -101,8 +204,12 @@ class DeleteAll(webapp.RequestHandler):
 
         self.response.out.write('<html><body>delete done</body></html>')
             
+#        err(self, "not implemented")
+
 application = webapp.WSGIApplication([
     ('/', MainPage),
+    ('/apply', Apply),
+    ('/cancel', Cancel),
     ('/deleteall', DeleteAll),
     ('/initload', InitLoad)
     ], debug=True)

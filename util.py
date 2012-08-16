@@ -35,24 +35,47 @@ def tukihi2Date(s):
     d = datetime.date(year, month, day)
     return d
 
+#
+# エラーメッセージのログ、応答
+#
+def logerror(*args):
+    els = list(traceback.extract_stack()[-2][:3])
+    els[0] = os.path.basename(els[0])
+    try:
+        logging.error(str(els) + str(args))
+    except UnicodeDecodeError:
+        logging.error(str(els) + unicode(args))
+
 if __debug__:
     def dbgprint(*args):
-        items = list(traceback.extract_stack()[-2][:3])
-        items[0] = os.path.basename(items[0])
-        logging.warn(str(items) + str(args))
+        els = list(traceback.extract_stack()[-2][:3])
+        els[0] = os.path.basename(els[0])
+        try:
+            logging.debug(str(els) + str(args))
+        except UnicodeDecodeError:
+            logging.debug(str(els) + unicode(args))
 else:
     def dbgprint(*args): pass
+
+def err(handler, message):
+    els = list(traceback.extract_stack()[-2][:3])
+    els[0] = os.path.basename(els[0])
+    logging.error(str(els) + unicode(message))
+    out = u"""yamanokikaku: ご迷惑をおかけしております。
+システムエラーが発生しました。<br>""" + unicode(els) + unicode(message)
+
+    handler.response.out.write('<html><body>%s</body></html>' % out)
+    return
 
 def _test():
     import doctest
     doctest.testmod(verbose=True)
 
 if __name__ == '__main__':
-    dbgprint(5)
-    dbgprint("hi")
-    dbgprint("hi", "ho")
-    dbgprint(u"あ")
-    dbgprint(u"薬師岳", u"雲の平")
+    for i in (5, "hi", ["hi", "ho"], u"あ", [u"薬師岳", u"雲の平"]):
+        dbgprint(i)
+        logerror(i)
 
-    #_test()
+    print tukihi2Date(u"1970年1月1日")
+    print date2Tukihi(datetime.date(2000, 3, 5))
 # eof
