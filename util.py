@@ -3,9 +3,9 @@
 # util.py
 # Copyright (c) 2012, 2012 Kanda.Motohiro@gmail.com
 """
->>> tukihi2Datetime(u"1970年1月1日")
+>>> tukihi2Date(u"1970年1月1日")
 datetime.date(1970, 1, 1)
->>> tukihi2Datetime(u"1月15日")
+>>> tukihi2Date(u"1月15日")
 datetime.date(2012, 1, 15)
 >>> print date2Tukihi(datetime.date(2000, 3, 5))
 3月5日
@@ -15,25 +15,59 @@ import os
 import datetime
 import logging
 import traceback
+import unicodedata
+
 #
 # 日本語の月日と、 datetime 型の変換
 #
 def date2Tukihi(d):
     return u"%d月%d日" % (d.month, d.day)
 
-def tukihi2Date(s):
-    # 全角　数字は？
+def tukihi2Date(s, today=None):
+    if today:
+        year = today.year
+        month = today.month
+
+    # 全角数字を変換 http://www.nekonomics.jp/2010/12/intunicodedata.html
+    if isinstance(s, unicode):
+        s = unicodedata.normalize("NFKC", s)
+
+    # 3/7 は、３月７日
+    m = re.search("(\d{1,2})/(\d{1,2})", s)
+    if m:
+        month = int(m.group(1))
+        day = int(m.group(2))
+        return datetime.date(year, month, day)
+
     m = re.search(u"(\d+)年", s)
-    if m is None:
-        year = datetime.date.today().year
-    else:
+    if m:
         year = int(m.group(1))
 
-    m = re.search(u"(\d+)月(\d+)日", s)
-    month = int(m.group(1))
-    day = int(m.group(2))
+    m = re.search(u"(\d+)月", s)
+    if m:
+        month = int(m.group(1))
+    m = re.search(u"(\d+)日", s)
+    if m:
+        day = int(m.group(1))
+    else:
+        # 22（土・祝）
+        m = re.search(u"(\d+)", s)
+        day = int(m.group(1))
+
     d = datetime.date(year, month, day)
     return d
+
+def tukihi2Kikan(s, today=None):
+    """チルダで区切られていれば、開始、終了日として、datetime.date の組を返す。
+    なければ、同じ日を２つ返す。"""
+    if not u"～" in s:
+        d = tukihi2Date(s, today)
+        return d, d
+
+    els = s.split(u"～")
+    start = tukihi2Date(els[0], today)
+    end = tukihi2Date(els[1], today)
+    return start, end
 
 #
 # エラーメッセージのログ、応答
@@ -71,11 +105,23 @@ def _test():
     import doctest
     doctest.testmod(verbose=True)
 
-if __name__ == '__main__':
+def dbgprinttest():
     for i in (5, "hi", ["hi", "ho"], u"あ", [u"薬師岳", u"雲の平"]):
         dbgprint(i)
         logerror(i)
 
+def datetest():
+    today = datetime.date(2012, 8, 17)
     print tukihi2Date(u"1970年1月1日")
-    print date2Tukihi(datetime.date(2000, 3, 5))
+    print date2Tukihi(today)
+    print tukihi2Date(u"3/7", today)
+    print tukihi2Date("3/7", today)
+    print tukihi2Date(u"２０１２年５月4日")
+
+    print tukihi2Kikan(u"1日", today)
+    print tukihi2Kikan(u"7日（金）～9日（日）", today)
+
+if __name__ == '__main__':
+    datetest()
+    #_test()
 # eof

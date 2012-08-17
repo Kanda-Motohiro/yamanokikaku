@@ -11,9 +11,7 @@ from google.appengine.api import users
 webapp.template.register_template_library('sjisfilter')
 
 # http://code.google.com/intl/ja/appengine/articles/openid.html
-# が、サンプルコード。以下は、federated_identity='www.google.com だと、
-# Server error 500 になるバグレポート。
-# http://code.google.com/p/googleappengine/issues/detail?id=5907
+# が、サンプルコード。
 
 class OpenIDLoginHandler(webapp.RequestHandler):
     def get(self):
@@ -31,9 +29,6 @@ class OpenIDLoginHandler(webapp.RequestHandler):
             users.create_login_url(federated_identity='openid.biglobe.ne.jp') + \
             "<p><a href='%s'>yahoo</a></p>" % \
             users.create_login_url(federated_identity='yahoo.co.jp')
-
-        # http://openid.biglobe.ne.jp/forrp.html
-        # http://pc.casey.jp/archives/1162
 
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
         self.response.out.write(template.render("templates/login.tmpl", {'body': body}))

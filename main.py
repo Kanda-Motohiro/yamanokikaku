@@ -4,10 +4,13 @@
 # Copyright (c) 2008, 2012 Kanda.Motohiro@gmail.com
 
 """todo
+https://developers.google.com/appengine/docs/python/python27/migrate27#appyaml
+python 2.7
 エクセルファイルから、CSVにして、バルクロード。
+openid, remote_api は非互換だそうな。自分でローダを書こう。
 openid nickname から、会員番号にする。
+会員以外は、ログインしても、申し込みできない。
 こんにちわ https://me.yahoo.co.jp/a/OivdX2luJ7QBA6dN6NksAguJIZUPFCbaOOM- さん。
-http://blairconrad.wordpress.com/ server error on openid login
 """
 import wsgiref.handlers
 from google.appengine.ext import webapp
@@ -208,10 +211,12 @@ class DeleteAll(webapp.RequestHandler):
 
 application = webapp.WSGIApplication([
     ('/', MainPage),
-    ('/apply', Apply),
-    ('/cancel', Cancel),
+
     ('/deleteall', DeleteAll),
-    ('/initload', InitLoad)
+    ('/initload', InitLoad),
+
+    ('/apply', Apply),
+    ('/cancel', Cancel)
     ], debug=True)
 
 def main():

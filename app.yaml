@@ -3,8 +3,8 @@ version: 1
 runtime: python
 api_version: 1
 
-builtins:
-- remote_api: on
+#builtins:
+#- remote_api: on
 
 handlers:
 - url: /images
@@ -17,10 +17,6 @@ handlers:
 - url: /(.*\.html)
   static_files: \1
   upload: .*\.html
-
-- url: /(.*\.js)
-  static_files: \1
-  upload: .*\.js
 
 - url: /admin/.*
   script: admin.py
