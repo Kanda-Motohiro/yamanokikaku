@@ -6,7 +6,7 @@ import sys
 import re
 import datetime
 import util
-
+import os
 """
 sjis では、
   File "parsecsv.py", line 56
@@ -15,13 +15,15 @@ SyntaxError: 'shift_jis' codec can't decode bytes in position 5-6: illegal multi
 cp932 なら、動いた。
 """
 
-debug = 1
+debug = 0
 
 def parseSankouKikakuCsvFile(buf):
     """エクセルからCSV 形式にエクスポートされた、シフトJISで書かれた、
     今月の山行企画ファイルデータを読んで、データベースに入るように正規化して
-    企画のリストを返す。
-    確認のため、処理されなかった行も返す。
+    企画のリストを返す。 class Kikaku ではなくて、配列。整数や datetime.date
+    への変換は終わっている。文字は、unicode.
+    確認のため、処理されなかった行も返す。 unicode の配列。
+    buf は、シフトJIS の文字列を入力として期待する。
     """
     uni = buf.decode('cp932', 'replace')
     thisYear = datetime.date.today().year
@@ -30,24 +32,31 @@ def parseSankouKikakuCsvFile(buf):
     ignored = []
     out = []
     for line in uni.split("\n"):
+        # ヘッダー行は特別
         if u"山行案内一覧表" in line:
             m = re.search(u"(\d*)月", line)
             if m:
                 thisMonth = int(m.group(1))
-
             continue
         elif u" 山行名" in line and u"締切" in line: 
             continue
 
         # dos 改行を除く
-        els = line.strip().split(",")
+        line = line.strip()
+        els = line.split(",")
         if debug: print els
+
         # 定員は入ってないこともある
         if len(els) < 6 or els[0] == u"":
             ignored.append(line)
             continue
 
-        no = int(els[0])
+        try:
+            no = int(els[0])
+        except ValueError:
+            print "Invalid line in input file.\n%s" % line
+            return None, None
+
         # 山行タイトルの、* は除く。
         title = els[2].replace("*", "")
         rank = els[3]
@@ -55,7 +64,7 @@ def parseSankouKikakuCsvFile(buf):
 
         # 募集終了というのは、締め切りがない
         if els[5] == u"" or els[5] == u"済":
-            shimekiri = None
+            shimekiri = util.shimekiriNashi
         else:
             shimekiri = util.tukihi2Date(els[5],
             today=datetime.date(thisYear, thisMonth, 1))
@@ -66,21 +75,35 @@ def parseSankouKikakuCsvFile(buf):
             teiin = int(els[6])
         else:
             teiin = 0
+
+        # 整数、文字列、datetime.date など
         kikaku = (no, title, rank, start, end, shimekiri, teiin, leaders)
         out.append(kikaku)
 
     return out, ignored
 
 def main():
-    if len(sys.argv) == 1:
+    "ローカル実行して、確認するため。"
+    if "--test" in sys.argv:
         buf = sample
+    elif len(sys.argv) == 1:
+        buf = sys.stdin.read()
     else:
         buf = open(sys.argv[1]).read()
 
     out , ignored = parseSankouKikakuCsvFile(buf)
-    print out
-    print "ignored lines:"
-    print ignored
+
+    if os.name == 'posix':
+        encoding = "utf-8"
+    else:
+        encoding = "cp932" # on Windows
+
+    print "####\n%d accepted lines:\n####" % len(out)
+    for kikaku in out:
+        print "No=%d %s" % (kikaku[0], kikaku[1].encode(encoding, "replace")) 
+    print "####\n%d ignored lines:\n####" % len(ignored)
+    for line in ignored:
+        print line.encode(encoding, "replace")
 
 sample = """
 20１2年9月　　　山行案内一覧表　　　山行参加申込ＦＡＸ045-317-2365,,,,,,

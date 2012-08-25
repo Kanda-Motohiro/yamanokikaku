@@ -2,6 +2,7 @@
 # encoding=utf-8
 # http://yamanokikaku.appspot.com/main.py
 # Copyright (c) 2008, 2012 Kanda.Motohiro@gmail.com
+# Licensed under the Apache License, Version 2.0
 
 """todo
 https://developers.google.com/appengine/docs/python/python27/migrate27#appyaml
@@ -10,6 +11,7 @@ python 2.7
 openid, remote_api は非互換だそうな。自分でローダを書こう。
 openid nickname から、会員番号にする。
 会員以外は、ログインしても、申し込みできない。
+リーダーや参加者の名前などの詳細は、会員以外には見えない。
 こんにちわ https://me.yahoo.co.jp/a/OivdX2luJ7QBA6dN6NksAguJIZUPFCbaOOM- さん。
 """
 import wsgiref.handlers
@@ -27,14 +29,17 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from google.appengine.dist import use_library, _library
 try:
-    use_library('django', '1.1')
+    use_library('django', '1.3')
 except _library.UnacceptableVersionError, e:
     dbgprint(e)
+#    try:
+#        use_library('django', '1.2')
+#    except _library.UnacceptableVersionError, e: pass
     pass
 
 # http://d.hatena.ne.jp/gonsuzuki/20090129/1233298532
 # send shift-jis page
-webapp.template.register_template_library('sjisfilter')
+webapp.template.register_template_library('lib.sjisfilter')
 
 class Kikaku(db.Model):
     "山行企画"
@@ -65,11 +70,16 @@ class Kikaku(db.Model):
         else:
             end = u"-" + date2Tukihi(self.end)
 
+        # 締切日。指定なし、というのもある。
+        if self.shimekiri == shimekiriNashi:
+            shimekiri = u"なし"
+        else:
+            shimekiri = date2Tukihi(self.shimekiri)
+
         return u"No.%d %s %s 期日:%s%s 締切日:%s 定員:%s<br>\
         リーダー:%s メンバー:%s" % \
            (self.no, self.title, self.rank, date2Tukihi(self.start),
-           end, date2Tukihi(self.shimekiri), teiin,
-           leaders, members)
+           end, shimekiri, teiin, leaders, members)
 # end class
 
 def imanoKikakuItiran():
@@ -153,7 +163,7 @@ class MainPage(webapp.RequestHandler):
                 users.create_logout_url(self.request.uri))
 
         # 山行企画を表示し、申し込みとキャンセルのリンクをつける。
-        query =  db.GqlQuery("""SELECT * FROM Kikaku ORDER BY no DESC""")
+        query =  db.GqlQuery("""SELECT * FROM Kikaku ORDER BY start DESC""")
 
         kikakuList = []
         for rec in query:
@@ -169,8 +179,8 @@ class MainPage(webapp.RequestHandler):
 
             # 定員を超えていれば、おなじく。
             # 定員ゼロは、無限に受付。
-            elif rec.teiin != 0 and rec.teiin <= len(rec.members):
-                moushikomi = ""
+            #elif rec.teiin != 0 and rec.teiin <= len(rec.members):
+            #    moushikomi = ""
             elif user:
                 moushikomi = u"<a href=/apply?key=%s>申し込む</a>" % rec.key()
             
@@ -184,37 +194,11 @@ class MainPage(webapp.RequestHandler):
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
         self.response.out.write(template.render("templates/main.tmpl", template_values))
 
-class InitLoad(webapp.RequestHandler):
-    def get(self):
-        dbgprint("InitLoad")
-        rec = Kikaku(no = 243, title = u"薬師岳、雲の平", rank = "C-C-8.5",
-            start = tukihi2Date(u"8月8日"), end = tukihi2Date(u"8月12日"),
-            shimekiri = tukihi2Date(u"6月24日"), teiin = 10,
-            leaders = [u"大友", u"三浦"])
-        rec.put()
 
-        rec = Kikaku(no = 245, title = u"御岳山滝巡り", rank = "A-B-3.5",
-            start = tukihi2Date(u"7月1日"), end = tukihi2Date(u"7月1日"),
-            shimekiri = tukihi2Date(u"6月28日"), teiin = 0,
-            leaders = [u"田辺", u"居関"])
-        rec.put()
-        self.response.out.write('<html><body>done</body></html>')
-
-class DeleteAll(webapp.RequestHandler):
-    def get(self):
-        for rec in Kikaku.all():
-            db.delete(rec)
-
-        self.response.out.write('<html><body>delete done</body></html>')
-            
 #        err(self, "not implemented")
 
 application = webapp.WSGIApplication([
     ('/', MainPage),
-
-    ('/deleteall', DeleteAll),
-    ('/initload', InitLoad),
-
     ('/apply', Apply),
     ('/cancel', Cancel)
     ], debug=True)

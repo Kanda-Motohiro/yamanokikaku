@@ -17,6 +17,10 @@ import logging
 import traceback
 import unicodedata
 
+# 締め切りなし。当日参加が可能。datetime には、None は入らないので、
+# 西暦１年１月１日を、無効な日付として使う。
+shimekiriNashi = datetime.date.min
+
 #
 # 日本語の月日と、 datetime 型の変換
 #
@@ -27,6 +31,8 @@ def tukihi2Date(s, today=None):
     if today:
         year = today.year
         month = today.month
+    else:
+        year = datetime.date.today().year
 
     # 全角数字を変換 http://www.nekonomics.jp/2010/12/intunicodedata.html
     if isinstance(s, unicode):

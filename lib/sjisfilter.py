@@ -5,7 +5,7 @@
 from google.appengine.ext import webapp
 
 def sjis(body):
-    return body.encode("Shift_JIS")
+    return body.encode("cp932")
 
 register = webapp.template.create_template_register()
 register.filter(sjis)
