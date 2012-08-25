@@ -1,0 +1,57 @@
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset='UTF-8'" >
+<title>Google App Engine with OpenID 開発者向け情報</title>
+</head><body>
+<h1>Google App Engine with OpenID 開発者向け情報</h1>
+どちらかというと、私の覚え書きです。
+OpenID のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
+移るトラブルも記録しておきます。
+
+<h2>django 1.2</h2>
+現象<br>
+<pre>
+webapp.template.register_template_library('myfilter')
+984, in import_library
+    app_path, taglib = taglib_module.rsplit('.',1)
+    ValueError: need more than 1 value to unpack
+</pre>
+対策<br>
+http://www.adamcrossland.net/post/show/fixing-custom-tags-with-django-12
+ドットを含むように、フィルタを lib.myfilter にする。
+
+<h2>django 1.4.1</h2>
+現象<br>
+<pre>
+ImproperlyConfigured: Error importing template source loader django.template.loaders.filesystem.load_template_source: "'module' object has no attribute 'load_template_source'"
+</pre>
+対策<br>
+<h2>App Engine OpenID login が Server Error 500</h2>
+現象<br>
+http://code.google.com/intl/ja/appengine/articles/openid.html のサンプルコード
+を使う。<br>
+yahoo ではログインできるが、google は、Server Error になる。
+App Engine のログには、何も出ない。<br>
+対策<br>
+<pre>
+federated_identity='Google.com/accounts/o8/id'
+</pre>
+を、www.Google.com/accounts/o8/id にする。<br>
+出典<br>
+http://code.google.com/p/googleappengine/issues/detail?id=5907<br>
+
+<h2>appcfg.py create_bulkloader_config Authentication Failed</h2>
+現象<br>
+OpenID を使うと、bulkloader が認証エラーになる。<br>
+対策<br>
+仕様です。remote_api は、サポートされません。回避策があるようです。<br>
+出典<br>
+http://code.google.com/p/googleappengine/issues/detail?id=3258<br>
+http://code.google.com/p/googleappengine/issues/detail?id=5165<br>
+http://blog.notdot.net/2010/06/Using-remote-api-with-OpenID-authentication <br>
+http://stackoverflow.com/questions/2981226/app-engine-remote-api-with-openid<br>
+<br>
+<h2>日本で使われている主な OpenID </h2>
+http://openid.biglobe.ne.jp/forrp.html ウェブサイトを、BIGLOBE OpenIDに対応するには<br>
+http://pc.casey.jp/archives/1162 OpenIDを発行しているところ<br>
+<h2></h2>
+</body></html>
