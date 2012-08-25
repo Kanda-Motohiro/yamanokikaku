@@ -7,6 +7,18 @@
 OpenID のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
 移るトラブルも記録しておきます。
 
+<h2>HRD Migration</h2>
+現象<br>
+https://developers.google.com/appengine/docs/adminconsole/migration
+にしたがって、App Engine アプリケーションを HRD に移行しようとすると、
+Migration Tool の画面で、
+<pre>
+Please deploy your application code and index configuration on your target application before beginning the migration.
+</pre>
+といわれる。
+対策<br>
+app.yaml の application: に、 -hrd をつけた名前を指定して、appcfg.py update する。ま、そりゃそうだね。
+
 <h2>python 2.7</h2>
 https://developers.google.com/appengine/docs/python/python27/migrate27
 ちょっと待ってね。言語のバージョンが上がるだけでないんだ。これは大変。
