@@ -14,32 +14,25 @@ openid nickname から、会員番号にする。
 リーダーや参加者の名前などの詳細は、会員以外には見えない。
 こんにちわ https://me.yahoo.co.jp/a/OivdX2luJ7QBA6dN6NksAguJIZUPFCbaOOM- さん。
 """
-import wsgiref.handlers
-from google.appengine.ext import webapp
-from google.appengine.ext.webapp import template
-from google.appengine.ext import db
-from google.appengine.api import users
 import os
-import datetime
-from util import *
-
 # use django 1.1 if possible
 # http://code.google.com/intl/ja/appengine/docs/python/tools/libraries.html
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 from google.appengine.dist import use_library, _library
 try:
-    use_library('django', '1.3')
+    use_library('django', '1.2')
 except _library.UnacceptableVersionError, e:
     dbgprint(e)
-#    try:
-#        use_library('django', '1.2')
-#    except _library.UnacceptableVersionError, e: pass
     pass
 
-# http://d.hatena.ne.jp/gonsuzuki/20090129/1233298532
-# send shift-jis page
-webapp.template.register_template_library('lib.sjisfilter')
+import wsgiref.handlers
+from google.appengine.ext import webapp
+from google.appengine.ext.webapp import template
+from google.appengine.ext import db
+from google.appengine.api import users
+import datetime
+from util import *
 
 class Kikaku(db.Model):
     "山行企画"
@@ -188,11 +181,12 @@ class MainPage(webapp.RequestHandler):
 
         body += "<br>\n".join(kikakuList)
 
-        template_values = { 'body': body, }
+        template_values = { 'body': body }
 
         # ところで、app.yaml に、テンプレートを static と書いてはいけない。
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        self.response.out.write(template.render("templates/main.tmpl", template_values))
+        uni = template.render("templates/main.tmpl", template_values)
+        self.response.out.write(uni.encode("Shift_JIS", "replace"))
 
 
 #        err(self, "not implemented")

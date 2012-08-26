@@ -3,12 +3,19 @@
 # do_openid_login.py
 # Copyright (c) 2011 Kanda.Motohiro@gmail.com
 import os
+from google.appengine.dist import use_library, _library
+try:
+    use_library('django', '1.2')
+except _library.UnacceptableVersionError, e:
+    dbgprint(e)
+    pass
+
 import wsgiref.handlers
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
 
-webapp.template.register_template_library('sjisfilter')
+webapp.template.register_template_library('lib.sjisfilter')
 
 # http://code.google.com/intl/ja/appengine/articles/openid.html
 # が、サンプルコード。
@@ -31,7 +38,8 @@ class OpenIDLoginHandler(webapp.RequestHandler):
             users.create_login_url(federated_identity='yahoo.co.jp')
 
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        self.response.out.write(template.render("templates/login.tmpl", {'body': body}))
+        uni = template.render("templates/blank.tmpl", {'body': body})
+        self.response.out.write(uni.encode("Shift_JIS", "replace"))
 
 application = webapp.WSGIApplication([
     ('/_ah/login_required', OpenIDLoginHandler)

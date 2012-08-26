@@ -8,9 +8,11 @@ coding=sjis
 <meta http-equiv="Pragma" content="no-cache" >
 <meta http-equiv="Cache-Control" content="no-cache" >
 <meta http-equiv="Expires" content="-1" >
-<title>{% block title %}R‚ÌŠé‰æ{% endblock %}</title>
+<title>{% block title %}å±±ã®ä¼ç”»{% endblock %}</title>
 </head>
 <body>
+{% autoescape off %}
 {% block content %}{% endblock %}
+{% endautoescape %}
 </body>
 </html>

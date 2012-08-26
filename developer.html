@@ -25,9 +25,36 @@ https://developers.google.com/appengine/docs/python/python27/migrate27
 webapp template のラッパーがなくなって、django なりを、そのまま使う必要がある。
 use_library がなくなる。
 
-<h2>django sjis template</h2>
+<h2>django 1.2 sjis template</h2>
 今、私は、シフトJIS でテンプレートを書いているが、これができなくなる？
 携帯電話向けに、シフトJIS ページを送りたいのだが、どうするんだっけ。
+現象<br>
+<pre>
+  File "/opt/google_appengine/lib/django_1_2/django/template/loaders/filesystem.
+py", line 39, in load_template_source
+    return (file.read().decode(settings.FILE_CHARSET), filepath)
+  File "/usr/lib/python2.7/encodings/utf_8.py", line 16, in decode
+    return codecs.utf_8_decode(input, errors, True)
+UnicodeDecodeError: 'utf8' codec can't decode byte 0x8e in position 166: invalid
+ start byte
+</pre>
+
+対策<br>
+settings.py ファイルを作って、FILE_CHARSET='cp932' と書いたら、シフトJIS 
+のテンプレートも読めた。しかし、そのあと、レンダーした結果をシフトJIS にする
+フィルタをつかったら、また、エラーになった。
+
+結局、
+テンプレートは utf-8 で書く。
+最後に、シフトJIS にする。
+<pre>
+self.response.out.write(template.render("main.tmpl", template_values).encode("Shift_JIS"))
+</pre>
+のが、すなおで良いかと。
+
+なお、
+http://djangoproject.jp/doc/ja/1.0/topics/templates.html#id10
+テンプレート中の HTML タグがエスケープされる。
 
 <h2>django 1.2</h2>
 現象<br>
@@ -47,6 +74,8 @@ http://www.adamcrossland.net/post/show/fixing-custom-tags-with-django-12
 ImproperlyConfigured: Error importing template source loader django.template.loaders.filesystem.load_template_source: "'module' object has no attribute 'load_template_source'"
 </pre>
 対策<br>
+# rpm -e Djano
+
 <h2>App Engine OpenID login が Server Error 500</h2>
 現象<br>
 http://code.google.com/intl/ja/appengine/articles/openid.html のサンプルコード
