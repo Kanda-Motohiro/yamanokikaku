@@ -27,7 +27,7 @@ use_library がなくなる。
 
 <h2>django 1.2 sjis template</h2>
 今、私は、シフトJIS でテンプレートを書いているが、これができなくなる？
-携帯電話向けに、シフトJIS ページを送りたいのだが、どうするんだっけ。
+携帯電話向けに、シフトJIS ページを送りたいのだが、どうするんだっけ。<br>
 現象<br>
 <pre>
   File "/opt/google_appengine/lib/django_1_2/django/template/loaders/filesystem.
@@ -42,19 +42,42 @@ UnicodeDecodeError: 'utf8' codec can't decode byte 0x8e in position 166: invalid
 対策<br>
 settings.py ファイルを作って、FILE_CHARSET='cp932' と書いたら、シフトJIS 
 のテンプレートも読めた。しかし、そのあと、レンダーした結果をシフトJIS にする
-フィルタをつかったら、また、エラーになった。
-
+フィルタをつかったら、また、エラーになった。<br>
+<br>
 結局、
 テンプレートは utf-8 で書く。
 最後に、シフトJIS にする。
 <pre>
 self.response.out.write(template.render("main.tmpl", template_values).encode("Shift_JIS"))
 </pre>
-のが、すなおで良いかと。
+のが、すなおで良いかと。<br>
 
 なお、
 http://djangoproject.jp/doc/ja/1.0/topics/templates.html#id10
 テンプレート中の HTML タグがエスケープされる。
+
+これなんだ？
+<pre>
+Traceback (most recent call last):
+  File "/base/python_runtime/python_lib/versions/1/google/appengine/ext/webapp/_webapp25.py", line 710, in __call__
+    handler.get(*groups)
+  File "/base/data/home/apps/s~yamanokikaku/1.361307890220562570/main.py", line 188, in get
+    uni = template.render("templates/main.tmpl", template_values)
+...
+  File "/base/python_runtime/python_lib/versions/third_party/django-1.2/django/template/__init__.py", line 185, in compile_string
+    parser = parser_class(lexer.tokenize())
+  File "/base/python_runtime/python_lib/versions/third_party/django-1.2/django/template/__init__.py", line 251, in __init__
+    self.add_library(lib)
+  File "/base/python_runtime/python_lib/versions/third_party/django-1.2/django/template/__init__.py", line 352, in add_library
+    self.tags.update(lib.tags)
+AttributeError: 'NoneType' object has no attribute 'tags'
+</pre>
+対策<br>
+main.tmpl は、
+<pre>
+{% extends 'base.tmpl' %}
+</pre>
+しているのだが、ファイルの場所を、templates/main.tmpl から、直下に全部、変えたら、動いた。<br>
 
 <h2>django 1.2</h2>
 現象<br>

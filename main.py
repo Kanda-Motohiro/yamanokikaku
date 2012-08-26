@@ -185,7 +185,7 @@ class MainPage(webapp.RequestHandler):
 
         # ところで、app.yaml に、テンプレートを static と書いてはいけない。
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        uni = template.render("templates/main.tmpl", template_values)
+        uni = template.render("main.tmpl", template_values)
         self.response.out.write(uni.encode("Shift_JIS", "replace"))
 
 

@@ -15,8 +15,6 @@ from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
 
-webapp.template.register_template_library('lib.sjisfilter')
-
 # http://code.google.com/intl/ja/appengine/articles/openid.html
 # が、サンプルコード。
 
@@ -38,7 +36,7 @@ class OpenIDLoginHandler(webapp.RequestHandler):
             users.create_login_url(federated_identity='yahoo.co.jp')
 
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        uni = template.render("templates/blank.tmpl", {'body': body})
+        uni = template.render("blank.tmpl", {'body': body})
         self.response.out.write(uni.encode("Shift_JIS", "replace"))
 
 application = webapp.WSGIApplication([
