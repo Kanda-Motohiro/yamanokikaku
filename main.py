@@ -73,40 +73,49 @@ class Kikaku(db.Model):
             shimekiri = date2Tukihi(self.shimekiri)
 
         # no は、リンクにするので、ここでは返さない。
-        return u"%s %s 期日:%s%s 締切日:%s 定員:%s" % \
+        return u"%s %s 期日:%s%s 締切日:%s 定員:%s 現在:%d 人" % \
            (self.title, self.rank, date2Tukihi(self.start),
-           end, shimekiri, teiin)
+           end, shimekiri, teiin, len(self.members))
 # end class
 
-def imanoKikakuItiran():
-    "今の山行企画一覧をリストで返す。"
-    out = []
-    query =  db.GqlQuery("""SELECT * FROM Kikaku ORDER BY no DESC""")
+class Kaiin(db.Model):
+    "山岳会の会員"
+    no = db.IntegerProperty(required=True) # 会員番号 9000
+    name = db.StringProperty(required=True) # 田部井淳子
+    openid = db.StringProperty(required=True) # user.nickname
 
-    for rec in query:
-        out.append(unicode(rec))
-    return out
+def openid2KaiinNoAndName(openid):
+    ""
+    query =  db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1", openid)
+    recs = query.fetch(1)
+    if recs:
+        k = recs[0]
+        return u"%d %s" % (k.no, k.name), True
+    else:
+        return openid, False
 
-def getUserAndKey(handler):
+def getKeyAndUser(handler):
     """申し込みとキャンセルで使われる、ユーザーと企画のキーを返す。
     実は、ニックネームと、データベースレコードの参照になったもの。"""
-    user = users.get_current_user()
-    if not user:
-        logerr("no user")
-        return None, None
-
     key = handler.request.get('key')
     if not key:
         logerr("no key")
-        return None, None
+        return None, None, None
 
     try:
         rec = db.get(key)
     except db.BadKeyError:
         logerr("bad key", key)
-        return None, None
+        return None, None, None
 
-    return user.nickname(), rec
+    user = users.get_current_user()
+    if not user:
+        logerr("no user")
+        return None, None, None
+
+    name, ok = openid2KaiinNoAndName(user.nickname())
+
+    return rec, name, ok
 
 #
 # handlers
@@ -114,7 +123,7 @@ def getUserAndKey(handler):
 class Apply(webapp.RequestHandler):
     def get(self):
         "山行企画に申し込む。企画のキーが渡る。"
-        user, rec = getUserAndKey(self)
+        rec, user, ok = getKeyAndUser(self)
         if user is None:
             err("invalid user/key")
             return
@@ -132,7 +141,7 @@ class Apply(webapp.RequestHandler):
 class Cancel(webapp.RequestHandler):
     def get(self):
         "山行企画の申し込みをキャンセルする。"
-        user, rec = getUserAndKey(self)
+        rec, user, ok = getKeyAndUser(self)
         if user is None:
             err("invalid user/key")
             return
@@ -151,7 +160,7 @@ class Cancel(webapp.RequestHandler):
 class Detail(webapp.RequestHandler):
     def get(self):
         ""
-        user, rec = getUserAndKey(self)
+        rec, user, ok = getKeyAndUser(self)
         if user is None:
             err("invalid user/key")
             return
@@ -186,15 +195,24 @@ class MainPage(webapp.RequestHandler):
     def get(self):
         user = users.get_current_user()
         if not user:
-            body = u"<a href='/_ah/login_required'>ログイン</a><br>"
+            body = u"""申し込みなどをするには、
+            <a href='/_ah/login_required'>ログイン</a>して下さい。<br>"""
         else:
+            name, ok = openid2KaiinNoAndName(user.nickname())
             body = u'こんにちわ %s さん。<a href="%s">ログアウト</a><br>' % \
-                (user.nickname(),
-                users.create_logout_url(self.request.uri))
+                (name, users.create_logout_url(self.request.uri))
 
         # 山行企画一覧を表示する。会員には、申し込みもできる詳細ページの
         # リンクを示す。
-        query =  db.GqlQuery("""SELECT * FROM Kikaku ORDER BY start DESC""")
+        # 今は、デモなので、会員名簿がない。ログインしたら、会員とみなす。
+
+        # 今月以降の企画を表示する。
+        y = datetime.date.today().year
+        m = datetime.date.today().month
+        start = datetime.date(y, m, 1)
+
+        query =  db.GqlQuery("""SELECT * FROM Kikaku WHERE start >= :1 \
+            ORDER BY start DESC""", start)
 
         kikakuList = []
         for rec in query:
@@ -206,7 +224,7 @@ class MainPage(webapp.RequestHandler):
             kikaku += unicode(rec)
             kikakuList.append(kikaku)
 
-        body += "<br>\n".join(kikakuList)
+        body += u"<h2>山行案内一覧</h2>" + "<br>\n".join(kikakuList)
 
         template_values = { 'body': body }
 

@@ -18,9 +18,29 @@ import datetime
 import cgi
 import urllib
 
-from main import Kikaku
+from main import Kikaku, Kaiin
 from util import *
 import parsecsv
+
+class KaiinTouroku(webapp.RequestHandler):
+    def get(self):
+        form = """Please select kaiin.csv file and push the 'Send' button.<br>
+        <form action='/admin/kaiin' method='post' enctype='multipart/form-data'>
+        <input type='file' name='file'><br>
+        <input type='submit' value='Send'><br>
+        </form>"""
+        self.response.out.write('<html><body>%s</body></html>' % form)
+
+    def post(self):
+        form = cgi.FieldStorage()
+        buf = urllib.unquote_plus(form.getfirst("file"))
+        for line in buf.decode('cp932', 'replace').split("\n"):
+            els = line.split(",")
+            if len(els) != 3: continue
+            rec = Kaiin(no=int(els[0]), name=els[1], openid=els[2])
+            rec.put()
+
+        self.redirect("/")
 
 class BulkLoad(webapp.RequestHandler):
     def get(self):
@@ -84,6 +104,7 @@ application = webapp.WSGIApplication([
     ('/admin/deleteall', DeleteAll),
     ('/admin/initload', InitLoad),
 
+    ('/admin/kaiin', KaiinTouroku),
     ('/admin/bulkload', BulkLoad)
     ], debug=True)
 

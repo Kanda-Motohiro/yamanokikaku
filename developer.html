@@ -1,8 +1,8 @@
 <html><head>
 <meta http-equiv="Content-Type" content="text/html; charset='UTF-8'" >
-<title>Google App Engine with OpenID 開発者向け情報</title>
+<title>Google App Engine with OpenID 携帯サイト開発者向け情報</title>
 </head><body>
-<h1>Google App Engine with OpenID 開発者向け情報</h1>
+<h1>Google App Engine with OpenID 携帯サイト開発者向け情報</h1>
 どちらかというと、私の覚え書きです。
 OpenID のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
 移るトラブルも記録しておきます。
@@ -52,11 +52,14 @@ self.response.out.write(template.render("main.tmpl", template_values).encode("Sh
 </pre>
 のが、すなおで良いかと。<br>
 
+app engine で webapp を使っていると、django の MIDDLEWARE_CLASSES が使えない、ですよね。普通なら、ここに、unicode -> sjis の変換を入れるのでしょう。ね。<br>
+<br>
 なお、
 http://djangoproject.jp/doc/ja/1.0/topics/templates.html#id10
 テンプレート中の HTML タグがエスケープされる。
 
-これなんだ？
+現象<br>
+テンプレートのパス指定が変わった。
 <pre>
 Traceback (most recent call last):
   File "/base/python_runtime/python_lib/versions/1/google/appengine/ext/webapp/_webapp25.py", line 710, in __call__
@@ -97,7 +100,10 @@ http://www.adamcrossland.net/post/show/fixing-custom-tags-with-django-12
 ImproperlyConfigured: Error importing template source loader django.template.loaders.filesystem.load_template_source: "'module' object has no attribute 'load_template_source'"
 </pre>
 対策<br>
+<pre>
 # rpm -e Djano
+</pre>
+app engine 同梱のが確実に動くようにする。--debug_imports で見る。
 
 <h2>App Engine OpenID login が Server Error 500</h2>
 現象<br>
