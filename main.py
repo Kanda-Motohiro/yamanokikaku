@@ -46,13 +46,16 @@ class Kikaku(db.Model):
     leaders = db.StringListProperty() # リーダー　大友、三浦
     members = db.StringListProperty()
 
-    def __repr__(self):
+    def detail(self):
         leaders = ",".join(self.leaders)
         if 0 < len(self.members):
             members = ",".join(self.members)
         else:
             members = u""
 
+        return u"リーダー:%s メンバー:%s" % (leaders, members)
+
+    def __repr__(self):
         # 定員、なし。いくらでも受付可能というのは、イレギュラーなので注意。
         if self.teiin == 0:
             teiin = u"なし"
@@ -69,10 +72,10 @@ class Kikaku(db.Model):
         else:
             shimekiri = date2Tukihi(self.shimekiri)
 
-        return u"No.%d %s %s 期日:%s%s 締切日:%s 定員:%s<br>\
-        リーダー:%s メンバー:%s" % \
-           (self.no, self.title, self.rank, date2Tukihi(self.start),
-           end, shimekiri, teiin, leaders, members)
+        # no は、リンクにするので、ここでは返さない。
+        return u"%s %s 期日:%s%s 締切日:%s 定員:%s" % \
+           (self.title, self.rank, date2Tukihi(self.start),
+           end, shimekiri, teiin)
 # end class
 
 def imanoKikakuItiran():
@@ -124,7 +127,7 @@ class Apply(webapp.RequestHandler):
         rec.members.append(user)
         rec.put()
         dbgprint("%s applied for %s" % (user, rec.title))
-        self.redirect("/")
+        self.redirect("/detail?key=%s" % rec.key())
 
 class Cancel(webapp.RequestHandler):
     def get(self):
@@ -143,7 +146,41 @@ class Cancel(webapp.RequestHandler):
         del rec.members[i]
         rec.put()
         dbgprint("%s canceled for %s" % (user, rec.title))
-        self.redirect("/")
+        self.redirect("/detail?key=%s" % rec.key())
+
+class Detail(webapp.RequestHandler):
+    def get(self):
+        ""
+        user, rec = getUserAndKey(self)
+        if user is None:
+            err("invalid user/key")
+            return
+
+        # 山行企画を表示し、申し込みとキャンセルのリンクをつける。
+
+        moushikomi = ""
+        # 自分の申し込みは、取り消せる。
+        # 同じ所に２度、申し込みはできない。
+        if user in rec.members:
+            moushikomi = u"<a href='/cancel?key=%s'>取り消す</a>" % rec.key()
+
+        # 締切日をすぎていれば、申し込みは表示しない。
+        #elif rec.shimekiri < datetime.date.today():
+        #    moushikomi = ""
+
+        # 定員を超えていれば、おなじく。
+        # 定員ゼロは、無限に受付。
+        #elif rec.teiin != 0 and rec.teiin <= len(rec.members):
+        #    moushikomi = ""
+        elif user:
+            moushikomi = u"<a href='/apply?key=%s'>申し込む</a>" % rec.key()
+        
+        body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
+        rec.detail() + " " + moushikomi + "<br>\n"
+
+        self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
+        uni = template.render("blank.tmpl", { 'body': body })
+        self.response.out.write(uni.encode("cp932", "replace"))
 
 class MainPage(webapp.RequestHandler):
     def get(self):
@@ -155,29 +192,19 @@ class MainPage(webapp.RequestHandler):
                 (user.nickname(),
                 users.create_logout_url(self.request.uri))
 
-        # 山行企画を表示し、申し込みとキャンセルのリンクをつける。
+        # 山行企画一覧を表示する。会員には、申し込みもできる詳細ページの
+        # リンクを示す。
         query =  db.GqlQuery("""SELECT * FROM Kikaku ORDER BY start DESC""")
 
         kikakuList = []
         for rec in query:
-            moushikomi = ""
-            # 自分の申し込みは、取り消せる。
-            # 同じ所に２度、申し込みはできない。
-            if user and user.nickname() in rec.members:
-                moushikomi = u"<a href=/cancel?key=%s>取り消す</a>" % rec.key()
+            if user:
+                kikaku = "<a href='/detail?key=%s'>No. %d</a> " % (rec.key(), rec.no)
+            else:
+                kikaku = "No. %d " % rec.no
 
-            # 締切日をすぎていれば、申し込みは表示しない。
-            #elif rec.shimekiri < datetime.date.today():
-            #    moushikomi = ""
-
-            # 定員を超えていれば、おなじく。
-            # 定員ゼロは、無限に受付。
-            #elif rec.teiin != 0 and rec.teiin <= len(rec.members):
-            #    moushikomi = ""
-            elif user:
-                moushikomi = u"<a href=/apply?key=%s>申し込む</a>" % rec.key()
-            
-            kikakuList.append(unicode(rec) + " " + moushikomi)
+            kikaku += unicode(rec)
+            kikakuList.append(kikaku)
 
         body += "<br>\n".join(kikakuList)
 
@@ -186,13 +213,15 @@ class MainPage(webapp.RequestHandler):
         # ところで、app.yaml に、テンプレートを static と書いてはいけない。
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
         uni = template.render("main.tmpl", template_values)
-        self.response.out.write(uni.encode("Shift_JIS", "replace"))
+        # 丸付き数字は、シフトJIS では見えない。
+        self.response.out.write(uni.encode("cp932", "replace"))
 
 
 #        err(self, "not implemented")
 
 application = webapp.WSGIApplication([
     ('/', MainPage),
+    ('/detail', Detail),
     ('/apply', Apply),
     ('/cancel', Cancel)
     ], debug=True)
