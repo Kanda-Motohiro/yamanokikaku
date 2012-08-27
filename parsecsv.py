@@ -54,7 +54,8 @@ def parseSankouKikakuCsvFile(buf):
         try:
             no = int(els[0])
         except ValueError:
-            print "Invalid line in input file.\n%s" % line
+            # Do not print the line. Might not be in ascii.
+            print "Invalid line in input file."
             return None, None
 
         # 山行タイトルの、* は除く。

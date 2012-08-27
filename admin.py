@@ -23,6 +23,7 @@ from util import *
 import parsecsv
 
 class KaiinTouroku(webapp.RequestHandler):
+    "会員の名簿をファイルでもらって、Kaiin に入れる。"
     def get(self):
         form = """Please select kaiin.csv file and push the 'Send' button.<br>
         <form action='/admin/kaiin' method='post' enctype='multipart/form-data'>
@@ -43,6 +44,7 @@ class KaiinTouroku(webapp.RequestHandler):
         self.redirect("/")
 
 class BulkLoad(webapp.RequestHandler):
+    "山行企画一覧をファイルでもらって、Kikaku に入れる。"
     def get(self):
         form = """Please select sankouannnai-yotei.csv file and push the 'Send' button.<br>
         <form action='/admin/bulkload' method='post' enctype='multipart/form-data'>
@@ -61,7 +63,24 @@ class BulkLoad(webapp.RequestHandler):
         # 文字コード変換は、この中でやる。
         kikakuList, ignored = parsecsv.parseSankouKikakuCsvFile(buf)
 
-        for k in kikakuList:
+        # 変なファイルを渡されたら、注意。
+        if kikakuList is None:
+            self.response.out.write("""<html><body>
+                Invalid file? Must be a csv text file.</body></html>""")
+            return
+
+        for i, k in enumerate(kikakuList):
+            # 同じファイルを２回、アップロードされたら、止める。
+            if i == 0:
+                query =  db.GqlQuery("SELECT * FROM Kikaku WHERE no = :1 AND \
+                    start = :2", k[0], k[3])
+                recs = query.fetch(1)
+                if recs:
+                    self.response.out.write("""<html><body>
+                    Duplicate found. No=%d start=%s</body></html>""" %
+                    (k[0], k[3]))
+                    return
+
             rec = Kikaku(no = k[0], title = k[1], rank = k[2],
                 start = k[3], end = k[4],
                 shimekiri = k[5], teiin = k[6],

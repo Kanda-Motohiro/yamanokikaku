@@ -7,6 +7,11 @@
 OpenID のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
 移るトラブルも記録しておきます。
 
+<h2>スマートフォンでない携帯電話から OpenID login</h2>
+現象<br>
+私がやったら、google では、URL が不正と言われた。yahoo は、javascript が必須といわれた。<br>
+残念だなあ。最悪、端末の識別番号を申告してもらって、会員とひもつけるしかないか。<br>
+<br>
 <h2>HRD Migration</h2>
 現象<br>
 https://developers.google.com/appengine/docs/adminconsole/migration
@@ -15,7 +20,7 @@ Migration Tool の画面で、
 <pre>
 Please deploy your application code and index configuration on your target application before beginning the migration.
 </pre>
-といわれる。
+といわれる。<br>
 対策<br>
 app.yaml の application: に、 -hrd をつけた名前を指定して、appcfg.py update する。ま、そりゃそうだね。
 
@@ -44,19 +49,19 @@ settings.py ファイルを作って、FILE_CHARSET='cp932' と書いたら、�
 のテンプレートも読めた。しかし、そのあと、レンダーした結果をシフトJIS にする
 フィルタをつかったら、また、エラーになった。<br>
 <br>
-結局、
-テンプレートは utf-8 で書く。
+結局、django 1 以上では、テンプレートは utf-8 で書く。
 最後に、シフトJIS にする。
 <pre>
 self.response.out.write(template.render("main.tmpl", template_values).encode("Shift_JIS"))
 </pre>
 のが、すなおで良いかと。<br>
-
+<br>
 app engine で webapp を使っていると、django の MIDDLEWARE_CLASSES が使えない、ですよね。普通なら、ここに、unicode -> sjis の変換を入れるのでしょう。ね。<br>
 <br>
 なお、
 http://djangoproject.jp/doc/ja/1.0/topics/templates.html#id10
-テンプレート中の HTML タグがエスケープされる。
+テンプレート中の HTML タグがエスケープされるという問題もある。<br>
+<br>
 
 現象<br>
 テンプレートのパス指定が変わった。
@@ -133,5 +138,5 @@ http://stackoverflow.com/questions/2981226/app-engine-remote-api-with-openid<br>
 <h2>日本で使われている主な OpenID </h2>
 http://openid.biglobe.ne.jp/forrp.html ウェブサイトを、BIGLOBE OpenIDに対応するには<br>
 http://pc.casey.jp/archives/1162 OpenIDを発行しているところ<br>
-<h2></h2>
+うちの会の人が使っている、OpenID プロバイダー、他にある？
 </body></html>

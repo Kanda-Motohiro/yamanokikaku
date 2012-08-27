@@ -6,13 +6,6 @@
 
 """todo
 https://developers.google.com/appengine/docs/python/python27/migrate27#appyaml
-python 2.7
-エクセルファイルから、CSVにして、バルクロード。
-openid, remote_api は非互換だそうな。自分でローダを書こう。
-openid nickname から、会員番号にする。
-会員以外は、ログインしても、申し込みできない。
-リーダーや参加者の名前などの詳細は、会員以外には見えない。
-こんにちわ https://me.yahoo.co.jp/a/OivdX2luJ7QBA6dN6NksAguJIZUPFCbaOOM- さん。
 """
 import os
 # use django 1.1 if possible
@@ -83,16 +76,19 @@ class Kaiin(db.Model):
     no = db.IntegerProperty(required=True) # 会員番号 9000
     name = db.StringProperty(required=True) # 田部井淳子
     openid = db.StringProperty(required=True) # user.nickname
+    # 携帯端末の識別番号でログインさせることになるかも。
 
 def openid2KaiinNoAndName(openid):
-    ""
+    "OpenID ニックネームをもらい、会員かどうか見る。"
     query =  db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1", openid)
     recs = query.fetch(1)
     if recs:
         k = recs[0]
-        return u"%d %s" % (k.no, k.name), True
+        # どうせ、会員番号と氏名で使うので、ここで name はその形にしておく。
+        return k.no, u"%d %s" % (k.no, k.name)
     else:
-        return openid, False
+        # 会員でない人は、番号 -1 を返し、openid nickname をそのまま返す。
+        return -1, openid
 
 def getKeyAndUser(handler):
     """申し込みとキャンセルで使われる、ユーザーと企画のキーを返す。
@@ -113,9 +109,9 @@ def getKeyAndUser(handler):
         logerr("no user")
         return None, None, None
 
-    name, ok = openid2KaiinNoAndName(user.nickname())
+    no, name = openid2KaiinNoAndName(user.nickname())
 
-    return rec, name, ok
+    return rec, no, name
 
 #
 # handlers
@@ -123,8 +119,8 @@ def getKeyAndUser(handler):
 class Apply(webapp.RequestHandler):
     def get(self):
         "山行企画に申し込む。企画のキーが渡る。"
-        rec, user, ok = getKeyAndUser(self)
-        if user is None:
+        rec, no, user = getKeyAndUser(self)
+        if rec is None:
             err("invalid user/key")
             return
 
@@ -135,14 +131,14 @@ class Apply(webapp.RequestHandler):
         # 参加者一覧に、このユーザーを追加する。
         rec.members.append(user)
         rec.put()
-        dbgprint("%s applied for %s" % (user, rec.title))
+        dbgprint("%s applied for %d %s" % (user, rec.no, rec.title))
         self.redirect("/detail?key=%s" % rec.key())
 
 class Cancel(webapp.RequestHandler):
     def get(self):
         "山行企画の申し込みをキャンセルする。"
-        rec, user, ok = getKeyAndUser(self)
-        if user is None:
+        rec, no, user = getKeyAndUser(self)
+        if rec is None:
             err("invalid user/key")
             return
 
@@ -154,18 +150,16 @@ class Cancel(webapp.RequestHandler):
         i = rec.members.index(user)
         del rec.members[i]
         rec.put()
-        dbgprint("%s canceled for %s" % (user, rec.title))
+        dbgprint("%s canceled for %d %s" % (user, rec.no, rec.title))
         self.redirect("/detail?key=%s" % rec.key())
 
 class Detail(webapp.RequestHandler):
     def get(self):
-        ""
-        rec, user, ok = getKeyAndUser(self)
+        " 山行企画を表示し、申し込みとキャンセルのリンクをつける。"
+        rec, no, user = getKeyAndUser(self)
         if user is None:
             err("invalid user/key")
             return
-
-        # 山行企画を表示し、申し込みとキャンセルのリンクをつける。
 
         moushikomi = ""
         # 自分の申し込みは、取り消せる。
@@ -198,7 +192,7 @@ class MainPage(webapp.RequestHandler):
             body = u"""申し込みなどをするには、
             <a href='/_ah/login_required'>ログイン</a>して下さい。<br>"""
         else:
-            name, ok = openid2KaiinNoAndName(user.nickname())
+            no, name = openid2KaiinNoAndName(user.nickname())
             body = u'こんにちわ %s さん。<a href="%s">ログアウト</a><br>' % \
                 (name, users.create_logout_url(self.request.uri))
 
@@ -210,9 +204,10 @@ class MainPage(webapp.RequestHandler):
         y = datetime.date.today().year
         m = datetime.date.today().month
         start = datetime.date(y, m, 1)
+        # だけど、デモなので、しばらくはこうする。
+        start = datetime.date(2012, 8, 1)
 
-        query =  db.GqlQuery("""SELECT * FROM Kikaku WHERE start >= :1 \
-            ORDER BY start DESC""", start)
+        query =  db.GqlQuery("SELECT * FROM Kikaku WHERE start >= :1 ORDER BY start ASC", start)
 
         kikakuList = []
         for rec in query:
@@ -233,7 +228,6 @@ class MainPage(webapp.RequestHandler):
         uni = template.render("main.tmpl", template_values)
         # 丸付き数字は、シフトJIS では見えない。
         self.response.out.write(uni.encode("cp932", "replace"))
-
 
 #        err(self, "not implemented")
 
