@@ -3,23 +3,27 @@
 # do_openid_login.py
 # Copyright (c) 2011 Kanda.Motohiro@gmail.com
 import os
+from util import *
 from google.appengine.dist import use_library, _library
 try:
     use_library('django', '1.2')
 except _library.UnacceptableVersionError, e:
     dbgprint(e)
     pass
-
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 import wsgiref.handlers
 from google.appengine.ext import webapp
-from google.appengine.ext.webapp import template
 from google.appengine.api import users
+
+from django.template import Context, loader
+import settings
 
 # http://code.google.com/intl/ja/appengine/articles/openid.html
 # が、サンプルコード。
 
 class OpenIDLoginHandler(webapp.RequestHandler):
     def get(self):
+        dbgprint(settings.TEMPLATE_DIRS)
         user = users.get_current_user()
         if user:
             body = u'<a href="%s">ログアウト</a>' % \
@@ -36,7 +40,8 @@ class OpenIDLoginHandler(webapp.RequestHandler):
             users.create_login_url(federated_identity='yahoo.co.jp')
 
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        uni = template.render("blank.tmpl", {'body': body})
+        t = loader.get_template('blank.tmpl')
+        uni = t.render(Context({'body': body}))
         self.response.out.write(uni.encode("Shift_JIS", "replace"))
 
 application = webapp.WSGIApplication([

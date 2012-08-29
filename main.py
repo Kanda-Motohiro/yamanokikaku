@@ -7,6 +7,7 @@
 """todo
 https://developers.google.com/appengine/docs/python/python27/migrate27#appyaml
 """
+from util import *
 import os
 # use django 1.1 if possible
 # http://code.google.com/intl/ja/appengine/docs/python/tools/libraries.html
@@ -21,11 +22,12 @@ except _library.UnacceptableVersionError, e:
 
 import wsgiref.handlers
 from google.appengine.ext import webapp
-from google.appengine.ext.webapp import template
 from google.appengine.ext import db
 from google.appengine.api import users
 import datetime
-from util import *
+
+from django.template import Context, loader
+import settings
 
 class Kikaku(db.Model):
     "山行企画"
@@ -182,7 +184,8 @@ class Detail(webapp.RequestHandler):
         rec.detail() + " " + moushikomi + "<br>\n"
 
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        uni = template.render("blank.tmpl", { 'body': body })
+        t = loader.get_template('blank.tmpl')
+        uni = t.render(Context({'body': body}))
         self.response.out.write(uni.encode("cp932", "replace"))
 
 class MainPage(webapp.RequestHandler):
@@ -221,11 +224,10 @@ class MainPage(webapp.RequestHandler):
 
         body += u"<h2>山行案内一覧</h2>" + "<br>\n".join(kikakuList)
 
-        template_values = { 'body': body }
-
         # ところで、app.yaml に、テンプレートを static と書いてはいけない。
         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        uni = template.render("main.tmpl", template_values)
+        t = loader.get_template('main.tmpl')
+        uni = t.render(Context({'body': body}))
         # 丸付き数字は、シフトJIS では見えない。
         self.response.out.write(uni.encode("cp932", "replace"))
 

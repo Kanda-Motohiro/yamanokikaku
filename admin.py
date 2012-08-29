@@ -3,6 +3,7 @@
 # admin.py
 # Copyright (c) 2008, 2012 Kanda.Motohiro@gmail.com
 import os
+from util import *
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from google.appengine.dist import use_library, _library
 try:
@@ -19,7 +20,6 @@ import cgi
 import urllib
 
 from main import Kikaku, Kaiin
-from util import *
 import parsecsv
 
 class KaiinTouroku(webapp.RequestHandler):
