@@ -116,6 +116,8 @@ class DeleteAll(webapp.RequestHandler):
     def get(self):
         for rec in Kikaku.all():
             db.delete(rec)
+        for rec in Kaiin.all():
+            db.delete(rec)
 
         self.response.out.write('<html><body>delete done</body></html>')
             
