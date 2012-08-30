@@ -28,7 +28,128 @@ app.yaml の application: に、 -hrd をつけた名前を指定して、appcfg
 https://developers.google.com/appengine/docs/python/python27/migrate27
 ちょっと待ってね。言語のバージョンが上がるだけでないんだ。これは大変。
 webapp template のラッパーがなくなって、django なりを、そのまま使う必要がある。
-use_library がなくなる。
+use_library がなくなる。<br>
+<br>
+思ったより、なんとかなった。テンプレートは、全部、templates に置いて、
+settings.py を新設して、TEMPLATE_DIRS で指定した。
+<pre>
+diff --git a/app.yaml b/app.yaml
+index 308eef5..6f41e92 100644
+--- a/app.yaml
++++ b/app.yaml
+@@ -1,7 +1,15 @@
+ application: yamanokikaku
+ version: 1
+-runtime: python
++runtime: python27
+ api_version: 1
++threadsafe: true
++
++libraries:
++- name: django
++  version: "1.2"
++
++- name: webapp2
++  version: "2.5.1"
+ 
+ handlers:
+ - url: /images
+@@ -16,14 +24,14 @@ handlers:
+   upload: .*\.html
+ 
+ - url: /_ah/login_required
+-  script: do_openid_login.py
++  script: do_openid_login.app
+ 
+diff --git a/do_openid_login.py b/do_openid_login.py
+index c12d655..c4fa303 100644
+--- a/do_openid_login.py
++++ b/do_openid_login.py
+@@ -3,23 +3,21 @@
+ # do_openid_login.py
+ # Copyright (c) 2011 Kanda.Motohiro@gmail.com
+ import os
+-from google.appengine.dist import use_library, _library
+-try:
+-    use_library('django', '1.2')
+-except _library.UnacceptableVersionError, e:
+-    dbgprint(e)
+-    pass
+-
++from util import *
++os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+ import wsgiref.handlers
+-from google.appengine.ext import webapp
+-from google.appengine.ext.webapp import template
+ from google.appengine.api import users
++import webapp2
++
++from django.template import Context, loader
++import settings
+ 
+ # http://code.google.com/intl/ja/appengine/articles/openid.html
+ # が、サンプルコード。
+ 
+-class OpenIDLoginHandler(webapp.RequestHandler):
++class OpenIDLoginHandler(webapp2.RequestHandler):
+     def get(self):
++        dbgprint(settings.TEMPLATE_DIRS)
+         user = users.get_current_user()
+         if user:
+             body = u'<a href="%s">ログアウト</a>' % \
+@@ -36,16 +34,11 @@ class OpenIDLoginHandler(webapp.RequestHandler):
+             users.create_login_url(federated_identity='yahoo.co.jp')
+ 
+         self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
+-        uni = template.render("blank.tmpl", {'body': body})
++        t = loader.get_template('blank.tmpl')
++        uni = t.render(Context({'body': body}))
+         self.response.out.write(uni.encode("Shift_JIS", "replace"))
+ 
+-application = webapp.WSGIApplication([
++app = webapp2.WSGIApplication([
+     ('/_ah/login_required', OpenIDLoginHandler)
+     ], debug=True)
+-
+-def main():
+-    wsgiref.handlers.CGIHandler().run(application)
+-
+-if __name__ == '__main__':
+-    main()
+ # eof
+
+diff --git a/settings.py b/settings.py
+new file mode 100644
+index 0000000..63fc14f
+--- /dev/null
++++ b/settings.py
+@@ -0,0 +1,7 @@
++#!/usr/bin/env python
++# http://yamanokikaku.appspot.com/settings.py
++# Copyright (c) 2012 Kanda.Motohiro@gmail.com
++import os
++
++TEMPLATE_DIRS = (os.path.join(os.path.dirname(__file__), 'templates'),)
++#TEMPLATE_DEBUG = True
+</pre>
+
+<h3>cgi.FieldStorage()</h3>
+って、いかにも、スレッドセーフでないよね。<br>
+現象<br>
+<pre>
+  File "/home/kanda/yamanokikaku/admin.py", line 53, in post
+    buf = urllib.unquote_plus(form.getfirst("file"))
+  File "/opt/google_appengine/google/appengine/dist27/urllib.py", line 1195, in 
+unquote_plus
+    s = s.replace('+', ' ')
+AttributeError: 'NoneType' object has no attribute 'replace'
+</pre>
+つまり、cgi.FieldStorage() で、post されたフォームのファイルがとれない。
+
+https://developers.google.com/appengine/docs/python/tools/webapp/requestclass
+
+If the character set is not specified in the request's Content-Type header, UTF-8 is assumed.
+Errors while decoding form arguments to Unicode are ignored. The constructor forces the following parameter to the WebOb Request constructor: unicode_errors='ignore'
 
 <h2>django 1.2 sjis template</h2>
 今、私は、シフトJIS でテンプレートを書いているが、これができなくなる？

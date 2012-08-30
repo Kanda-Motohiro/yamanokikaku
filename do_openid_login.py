@@ -4,16 +4,10 @@
 # Copyright (c) 2011 Kanda.Motohiro@gmail.com
 import os
 from util import *
-from google.appengine.dist import use_library, _library
-try:
-    use_library('django', '1.2')
-except _library.UnacceptableVersionError, e:
-    dbgprint(e)
-    pass
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 import wsgiref.handlers
-from google.appengine.ext import webapp
 from google.appengine.api import users
+import webapp2
 
 from django.template import Context, loader
 import settings
@@ -21,7 +15,7 @@ import settings
 # http://code.google.com/intl/ja/appengine/articles/openid.html
 # が、サンプルコード。
 
-class OpenIDLoginHandler(webapp.RequestHandler):
+class OpenIDLoginHandler(webapp2.RequestHandler):
     def get(self):
         dbgprint(settings.TEMPLATE_DIRS)
         user = users.get_current_user()
@@ -44,13 +38,7 @@ class OpenIDLoginHandler(webapp.RequestHandler):
         uni = t.render(Context({'body': body}))
         self.response.out.write(uni.encode("Shift_JIS", "replace"))
 
-application = webapp.WSGIApplication([
+app = webapp2.WSGIApplication([
     ('/_ah/login_required', OpenIDLoginHandler)
     ], debug=True)
-
-def main():
-    wsgiref.handlers.CGIHandler().run(application)
-
-if __name__ == '__main__':
-    main()
 # eof

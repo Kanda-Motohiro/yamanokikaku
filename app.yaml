@@ -1,7 +1,15 @@
 application: yamanokikaku
 version: 1
-runtime: python
+runtime: python27
 api_version: 1
+threadsafe: yes
+
+libraries:
+- name: django
+  version: "1.3"
+
+- name: webapp2
+  version: "2.5.1"
 
 handlers:
 - url: /images
@@ -16,14 +24,14 @@ handlers:
   upload: .*\.html
 
 - url: /admin/.*
-  script: admin.py
+  script: admin.app
   login: admin
 
 - url: /_ah/login_required
-  script: do_openid_login.py
+  script: do_openid_login.app
 
 - url: .*
-  script: main.py
+  script: main.app
 #  login: required
 
 # eof

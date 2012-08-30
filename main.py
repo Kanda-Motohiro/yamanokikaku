@@ -7,27 +7,18 @@
 """todo
 https://developers.google.com/appengine/docs/python/python27/migrate27#appyaml
 """
-from util import *
 import os
-# use django 1.1 if possible
-# http://code.google.com/intl/ja/appengine/docs/python/tools/libraries.html
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
-
-from google.appengine.dist import use_library, _library
-try:
-    use_library('django', '1.2')
-except _library.UnacceptableVersionError, e:
-    dbgprint(e)
-    pass
-
 import wsgiref.handlers
-from google.appengine.ext import webapp
 from google.appengine.ext import db
 from google.appengine.api import users
 import datetime
+import webapp2
 
 from django.template import Context, loader
 import settings
+from util import *
+
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 class Kikaku(db.Model):
     "山行企画"
@@ -118,7 +109,7 @@ def getKeyAndUser(handler):
 #
 # handlers
 #
-class Apply(webapp.RequestHandler):
+class Apply(webapp2.RequestHandler):
     def get(self):
         "山行企画に申し込む。企画のキーが渡る。"
         rec, no, user = getKeyAndUser(self)
@@ -136,7 +127,7 @@ class Apply(webapp.RequestHandler):
         dbgprint("%s applied for %d %s" % (user, rec.no, rec.title))
         self.redirect("/detail?key=%s" % rec.key())
 
-class Cancel(webapp.RequestHandler):
+class Cancel(webapp2.RequestHandler):
     def get(self):
         "山行企画の申し込みをキャンセルする。"
         rec, no, user = getKeyAndUser(self)
@@ -155,7 +146,7 @@ class Cancel(webapp.RequestHandler):
         dbgprint("%s canceled for %d %s" % (user, rec.no, rec.title))
         self.redirect("/detail?key=%s" % rec.key())
 
-class Detail(webapp.RequestHandler):
+class Detail(webapp2.RequestHandler):
     def get(self):
         " 山行企画を表示し、申し込みとキャンセルのリンクをつける。"
         rec, no, user = getKeyAndUser(self)
@@ -188,7 +179,7 @@ class Detail(webapp.RequestHandler):
         uni = t.render(Context({'body': body}))
         self.response.out.write(uni.encode("cp932", "replace"))
 
-class MainPage(webapp.RequestHandler):
+class MainPage(webapp2.RequestHandler):
     def get(self):
         user = users.get_current_user()
         if not user:
@@ -233,16 +224,10 @@ class MainPage(webapp.RequestHandler):
 
 #        err(self, "not implemented")
 
-application = webapp.WSGIApplication([
+app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/detail', Detail),
     ('/apply', Apply),
     ('/cancel', Cancel)
     ], debug=True)
-
-def main():
-    wsgiref.handlers.CGIHandler().run(application)
-
-if __name__ == '__main__':
-    main()
 # eof

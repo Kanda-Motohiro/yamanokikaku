@@ -3,26 +3,20 @@
 # admin.py
 # Copyright (c) 2008, 2012 Kanda.Motohiro@gmail.com
 import os
-from util import *
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
-from google.appengine.dist import use_library, _library
-try:
-    use_library('django', '1.2')
-except _library.UnacceptableVersionError, e:
-    dbgprint(e)
-    pass
-
-import wsgiref.handlers
-from google.appengine.ext import webapp
-from google.appengine.ext import db
 import datetime
 import cgi
 import urllib
+import wsgiref.handlers
+import webapp2
+from google.appengine.ext import db
 
 from main import Kikaku, Kaiin
 import parsecsv
+from util import *
 
-class KaiinTouroku(webapp.RequestHandler):
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+
+class KaiinTouroku(webapp2.RequestHandler):
     "会員の名簿をファイルでもらって、Kaiin に入れる。"
     def get(self):
         form = """Please select kaiin.csv file and push the 'Send' button.<br>
@@ -43,7 +37,7 @@ class KaiinTouroku(webapp.RequestHandler):
 
         self.redirect("/")
 
-class BulkLoad(webapp.RequestHandler):
+class BulkLoad(webapp2.RequestHandler):
     "山行企画一覧をファイルでもらって、Kikaku に入れる。"
     def get(self):
         form = """Please select sankouannnai-yotei.csv file and push the 'Send' button.<br>
@@ -55,7 +49,6 @@ class BulkLoad(webapp.RequestHandler):
 
     def post(self):
         # シフトJIS のファイルなので、get ではとれない。
-        form = cgi.FieldStorage()
         buf = urllib.unquote_plus(form.getfirst("file"))
 
         dbgprint(buf[:64])
@@ -96,7 +89,7 @@ class BulkLoad(webapp.RequestHandler):
         # 結果を表示してはいけない。
         self.redirect("/")
 
-class InitLoad(webapp.RequestHandler):
+class InitLoad(webapp2.RequestHandler):
     def get(self):
         dbgprint("InitLoad")
         rec = Kikaku(no = 243, title = u"薬師岳、雲の平", rank = "C-C-8.5",
@@ -112,24 +105,20 @@ class InitLoad(webapp.RequestHandler):
         rec.put()
         self.response.out.write('<html><body>done</body></html>')
 
-class DeleteAll(webapp.RequestHandler):
+class DeleteAll(webapp2.RequestHandler):
     def get(self):
         for rec in Kikaku.all():
+            db.delete(rec)
+        for rec in Kaiin.all():
             db.delete(rec)
 
         self.response.out.write('<html><body>delete done</body></html>')
             
-application = webapp.WSGIApplication([
+app = webapp2.WSGIApplication([
     ('/admin/deleteall', DeleteAll),
     ('/admin/initload', InitLoad),
 
     ('/admin/kaiin', KaiinTouroku),
     ('/admin/bulkload', BulkLoad)
     ], debug=True)
-
-def main():
-    wsgiref.handlers.CGIHandler().run(application)
-
-if __name__ == '__main__':
-    main()
 # eof
