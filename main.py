@@ -199,7 +199,7 @@ class MainPage(webapp2.RequestHandler):
         m = datetime.date.today().month
         start = datetime.date(y, m, 1)
         # だけど、デモなので、しばらくはこうする。
-        start = datetime.date(2012, 8, 1)
+        start = datetime.date(2012, 6, 1)
 
         query =  db.GqlQuery("SELECT * FROM Kikaku WHERE start >= :1 ORDER BY start ASC", start)
 
