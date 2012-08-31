@@ -4,7 +4,6 @@
 # Copyright (c) 2008, 2012 Kanda.Motohiro@gmail.com
 import os
 import datetime
-import cgi
 import urllib
 import wsgiref.handlers
 import webapp2
@@ -14,44 +13,47 @@ from main import Kikaku, Kaiin
 import parsecsv
 from util import *
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
-
 class KaiinTouroku(webapp2.RequestHandler):
     "会員の名簿をファイルでもらって、Kaiin に入れる。"
     def get(self):
-        form = """Please select kaiin.csv file and push the 'Send' button.<br>
+        body = u"""Please select kaiin.csv file and push the 'Send' button.<br>
         <form action='/admin/kaiin' method='post' enctype='multipart/form-data'>
         <input type='file' name='file'><br>
         <input type='submit' value='Send'><br>
         </form>"""
-        self.response.out.write('<html><body>%s</body></html>' % form)
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
     def post(self):
-        form = cgi.FieldStorage()
-        buf = urllib.unquote_plus(form.getfirst("file"))
-        for line in buf.decode('cp932', 'replace').split("\n"):
+        buf = self.request.get("file")
+        dbgprint(buf[:32])
+        uni = buf.decode('cp932', 'replace')
+        for line in uni.split("\n"):
             els = line.split(",")
             if len(els) != 3: continue
             rec = Kaiin(no=int(els[0]), name=els[1], openid=els[2])
             rec.put()
 
+        #render_template_and_write_in_sjis(self, 'blank.tmpl', uni)
         self.redirect("/")
 
 class BulkLoad(webapp2.RequestHandler):
     "山行企画一覧をファイルでもらって、Kikaku に入れる。"
     def get(self):
-        form = """Please select sankouannnai-yotei.csv file and push the 'Send' button.<br>
+        body = u"""Please select sankouannnai-yotei.csv file and push the 'Send' button.<br>
         <form action='/admin/bulkload' method='post' enctype='multipart/form-data'>
         <input type='file' name='file'><br>
         <input type='submit' value='Send'><br>
         </form>"""
-        self.response.out.write('<html><body>%s</body></html>' % form)
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
     def post(self):
-        # シフトJIS のファイルなので、get ではとれない。
-        buf = urllib.unquote_plus(form.getfirst("file"))
-
-        dbgprint(buf[:64])
+        # python 2.7 webapp2 環境では、
+        # cgi.FieldStorage() は、スレッドセーフでないので、動かない。
+        # dev app server では、 None の辞書しか返らなかった。
+        # 昔は、シフトJIS のファイルに get すると、中身が化けたが、
+        # 今は、大丈夫のよう。
+        buf = self.request.get("file")
+        dbgprint(buf[:32])
 
         # 文字コード変換は、この中でやる。
         kikakuList, ignored = parsecsv.parseSankouKikakuCsvFile(buf)

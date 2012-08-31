@@ -14,11 +14,8 @@ from google.appengine.api import users
 import datetime
 import webapp2
 
-from django.template import Context, loader
 import settings
 from util import *
-
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
 class Kikaku(db.Model):
     "山行企画"
@@ -172,12 +169,9 @@ class Detail(webapp2.RequestHandler):
             moushikomi = u"<a href='/apply?key=%s'>申し込む</a>" % rec.key()
         
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
-        rec.detail() + " " + moushikomi + "<br>\n"
+            rec.detail() + " " + moushikomi + "<br>\n"
 
-        self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        t = loader.get_template('blank.tmpl')
-        uni = t.render(Context({'body': body}))
-        self.response.out.write(uni.encode("cp932", "replace"))
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
@@ -215,12 +209,7 @@ class MainPage(webapp2.RequestHandler):
 
         body += u"<h2>山行案内一覧</h2>" + "<br>\n".join(kikakuList)
 
-        # ところで、app.yaml に、テンプレートを static と書いてはいけない。
-        self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        t = loader.get_template('main.tmpl')
-        uni = t.render(Context({'body': body}))
-        # 丸付き数字は、シフトJIS では見えない。
-        self.response.out.write(uni.encode("cp932", "replace"))
+        render_template_and_write_in_sjis(self, 'main.tmpl', body)
 
 #        err(self, "not implemented")
 

@@ -4,12 +4,9 @@
 # Copyright (c) 2011 Kanda.Motohiro@gmail.com
 import os
 from util import *
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 import wsgiref.handlers
 from google.appengine.api import users
 import webapp2
-
-from django.template import Context, loader
 import settings
 
 # http://code.google.com/intl/ja/appengine/articles/openid.html
@@ -33,10 +30,7 @@ class OpenIDLoginHandler(webapp2.RequestHandler):
             "<p><a href='%s'>yahoo</a></p>" % \
             users.create_login_url(federated_identity='yahoo.co.jp')
 
-        self.response.headers['Content-Type'] = "text/html; charset=Shift_JIS"
-        t = loader.get_template('blank.tmpl')
-        uni = t.render(Context({'body': body}))
-        self.response.out.write(uni.encode("Shift_JIS", "replace"))
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
 app = webapp2.WSGIApplication([
     ('/_ah/login_required', OpenIDLoginHandler)

@@ -17,6 +17,17 @@ import logging
 import traceback
 import unicodedata
 
+def render_template_and_write_in_sjis(handler, template_filename, body):
+    from django.template import Context, loader
+    # ところで、app.yaml に、テンプレートを static と書いてはいけない。
+    handler.response.headers['Content-Type'] = "text/html; charset=cp932"
+
+    t = loader.get_template(template_filename)
+    uni = t.render(Context({'body': body}))
+    # 丸付き数字は、シフトJIS では見えない。
+    handler.response.out.write(uni.encode("cp932", "replace"))
+    return
+
 # 締め切りなし。当日参加が可能。datetime には、None は入らないので、
 # 西暦１年１月１日を、無効な日付として使う。
 shimekiriNashi = datetime.date.min
