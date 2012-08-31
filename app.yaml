@@ -30,11 +30,7 @@ handlers:
   script: admin.app
   login: admin
 
-- url: /_ah/login_required
-  script: do_openid_login.app
-
 - url: .*
   script: main.app
-#  login: required
 
 # eof

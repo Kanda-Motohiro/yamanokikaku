@@ -178,7 +178,7 @@ class MainPage(webapp2.RequestHandler):
         user = users.get_current_user()
         if not user:
             body = u"""申し込みなどをするには、
-            <a href='/_ah/login_required'>ログイン</a>して下さい。<br>"""
+            <a href='/login'>ログイン</a>して下さい。<br>"""
         else:
             no, name = openid2KaiinNoAndName(user.nickname())
             body = u'こんにちわ %s さん。<a href="%s">ログアウト</a><br>' % \
@@ -211,12 +211,33 @@ class MainPage(webapp2.RequestHandler):
 
         render_template_and_write_in_sjis(self, 'main.tmpl', body)
 
-#        err(self, "not implemented")
+# end MainPage
+
+class Login(webapp2.RequestHandler):
+    def get(self):
+        user = users.get_current_user()
+        if user:
+            body = u'<a href="%s">ログアウト</a>' % \
+                users.create_logout_url(self.request.uri)
+        else:
+            body = u"お持ちのID でログインください。<br>" + \
+            "<p><a href='%s'>google</a></p>" % \
+            users.create_login_url(federated_identity='www.google.com/accounts/o8/id') + \
+            "<p><a href='%s'>mixi</a></p>" % \
+            users.create_login_url(federated_identity='mixi.jp') + \
+            "<p><a href='%s'>biglobe</a></p>" % \
+            users.create_login_url(federated_identity='openid.biglobe.ne.jp') + \
+            "<p><a href='%s'>yahoo</a></p>" % \
+            users.create_login_url(federated_identity='yahoo.co.jp')
+
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),
+    ('/login', Login),
     ('/detail', Detail),
     ('/apply', Apply),
     ('/cancel', Cancel)
     ], debug=True)
+#        err(self, "not implemented")
 # eof
