@@ -93,22 +93,24 @@ def openid2KaiinNoAndName(openid):
 
 def getKeyAndUser(handler):
     """申し込みとキャンセルで使われる、ユーザーと企画のキーを返す。
-    実は、ニックネームと、データベースレコードの参照になったもの。"""
+    実は、ニックネームと、データベースレコードの参照になったもの。
+    ついでに、エラーがいろいろあるので、最後の戻り値に文字列で返す。
+    """
     key = handler.request.get('key')
     if not key:
         logerror("no key")
-        return None, None, None
+        return None, None, "no key"
 
     try:
         rec = db.get(key)
     except db.BadKeyError:
         logerror("bad key", key)
-        return None, None, None
+        return None, None, "bad key"
 
     user = users.get_current_user()
     if not user:
         logerror("no user")
-        return None, None, None
+        return None, None, "no user"
 
     no, name = openid2KaiinNoAndName(user.nickname())
 
@@ -122,7 +124,7 @@ class Apply(webapp2.RequestHandler):
         "山行企画に申し込む。企画のキーが渡る。"
         rec, no, user = getKeyAndUser(self)
         if rec is None:
-            err(self, "invalid user/key")
+            err(self, "invalid user/key " + user)
             return
 
         if user in rec.members:
@@ -140,7 +142,7 @@ class Cancel(webapp2.RequestHandler):
         "山行企画の申し込みをキャンセルする。"
         rec, no, user = getKeyAndUser(self)
         if rec is None:
-            err(self, "invalid user/key")
+            err(self, "invalid user/key " + user)
             return
 
         if not user in rec.members:
@@ -158,8 +160,8 @@ class Detail(webapp2.RequestHandler):
     def get(self):
         " 山行企画を表示し、申し込みとキャンセルのリンクをつける。"
         rec, no, user = getKeyAndUser(self)
-        if user is None:
-            err(self, "invalid user/key")
+        if rec is None:
+            err(self, "invalid user/key " + user)
             return
 
         moushikomi = ""
@@ -275,11 +277,27 @@ class Login(webapp2.RequestHandler):
             おそれいりますが、そのときは、パソコン、スマートフォンなどから
             ご利用下さい。""")
 
+class Debug(webapp2.RequestHandler):
+    def get(self):
+        "デバッグ用に、最初の企画レコードのキーを返す。"
+        if self.request.environ.get("SERVER_NAME") != "localhost":
+            self.error(404)
+
+        recs =  db.GqlQuery("SELECT * FROM Kikaku").fetch(1)
+        if len(recs) == 0:
+            key = "None"
+        else:
+            key = recs[0].key()
+        # プレーンテキスト
+        self.response.headers['Content-Type'] = "text/plain"
+        self.response.out.write("key=%s" % key)
+
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/login', Login),
     ('/table', Table),
     ('/detail', Detail),
+    ('/debug', Debug),
     ('/apply', Apply),
     ('/cancel', Cancel)
     ], debug=True)

@@ -114,7 +114,7 @@ def main():
     elif len(sys.argv) == 1:
         buf = sys.stdin.read()
     else:
-        buf = open(sys.argv[1]).read()
+        buf = open(sys.argv[1], "rb").read()
 
     out , ignored = parseSankouKikakuCsvFile(buf)
 

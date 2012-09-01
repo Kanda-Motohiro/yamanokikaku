@@ -28,7 +28,14 @@ class KaiinTouroku(webapp2.RequestHandler):
     def post(self):
         buf = self.request.get("file")
         dbgprint(buf[:32])
-        uni = buf.decode('cp932', 'replace')
+        try:
+            uni = buf.decode('cp932')
+        except UnicodeDecodeError, e:
+            self.response.out.write("""<html><body>
+                Invalid file? Must be a csv text file in SJIS.<br>%s
+                </body></html>""" % str(e))
+            return
+
         for line in uni.split("\n"):
             els = line.split(",")
             if len(els) != 3: continue
@@ -64,7 +71,7 @@ class KikakuTouroku(webapp2.RequestHandler):
         # 変なファイルを渡されたら、注意。
         if kikakuList is None:
             self.response.out.write("""<html><body>
-                Invalid file? Must be a csv text file.</body></html>""")
+                Invalid file? Must be a csv text file in SJIS.</body></html>""")
             return
 
         for i, k in enumerate(kikakuList):
