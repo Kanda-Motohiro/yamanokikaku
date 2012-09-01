@@ -7,25 +7,8 @@
 OpenID のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
 移るトラブルも記録しておきます。
 
-<h2>スマートフォンでない携帯電話から OpenID login</h2>
-現象<br>
-私がやったら、google では、URL が不正と言われた。yahoo は、javascript が必須といわれた。<br>
-残念だなあ。最悪、端末の識別番号を申告してもらって、会員とひもつけるしかないか。<br>
-<br>
-<h2>HRD Migration</h2>
-現象<br>
-https://developers.google.com/appengine/docs/adminconsole/migration
-にしたがって、App Engine アプリケーションを HRD に移行しようとすると、
-Migration Tool の画面で、
-<pre>
-Please deploy your application code and index configuration on your target application before beginning the migration.
-</pre>
-といわれる。<br>
-対策<br>
-app.yaml の application: に、 -hrd をつけた名前を指定して、appcfg.py update する。ま、そりゃそうだね。
-
-<h2>python 2.7</h2>
-https://developers.google.com/appengine/docs/python/python27/migrate27
+<h2>app engine python 2.7</h2>
+https://developers.google.com/appengine/docs/python/python27/migrate27<br>
 ちょっと待ってね。言語のバージョンが上がるだけでないんだ。これは大変。
 webapp template のラッパーがなくなって、django なりを、そのまま使う必要がある。
 use_library がなくなる。<br>
@@ -144,12 +127,18 @@ unquote_plus
     s = s.replace('+', ' ')
 AttributeError: 'NoneType' object has no attribute 'replace'
 </pre>
-つまり、cgi.FieldStorage() で、post されたフォームのファイルがとれない。
-
-https://developers.google.com/appengine/docs/python/tools/webapp/requestclass
-
+つまり、cgi.FieldStorage() で、post されたフォームのファイルがとれない。<br>
+<br>
+https://developers.google.com/appengine/docs/python/tools/webapp/requestclass<br>
 If the character set is not specified in the request's Content-Type header, UTF-8 is assumed.
-Errors while decoding form arguments to Unicode are ignored. The constructor forces the following parameter to the WebOb Request constructor: unicode_errors='ignore'
+Errors while decoding form arguments to Unicode are ignored. The constructor forces the following parameter to the WebOb Request constructor: unicode_errors='ignore'<br>
+<br>
+対策<br>
+<pre>
+self.request.get("file")
+</pre>
+で、文字コード変換してないファイルの中身がとれた。昔は、ここで、ascii 
+以外の文字が落ちたのだが、webapp2 はうまくできるらしい。
 
 <h2>django 1.2 sjis template</h2>
 今、私は、シフトJIS でテンプレートを書いているが、これができなくなる？
@@ -183,6 +172,9 @@ app engine で webapp を使っていると、django の MIDDLEWARE_CLASSES が�
 http://djangoproject.jp/doc/ja/1.0/topics/templates.html#id10
 テンプレート中の HTML タグがエスケープされるという問題もある。<br>
 <br>
+
+以下は、python 2.7 webapp2 に移行する前の情報。
+<hr>
 
 現象<br>
 テンプレートのパス指定が変わった。
@@ -230,6 +222,23 @@ ImproperlyConfigured: Error importing template source loader django.template.loa
 # rpm -e Djano
 </pre>
 app engine 同梱のが確実に動くようにする。--debug_imports で見る。
+
+<h2>スマートフォンでない携帯電話から OpenID login</h2>
+現象<br>
+私がやったら、google では、URL が不正と言われた。yahoo は、javascript が必須といわれた。<br>
+残念だなあ。最悪、端末の識別番号を申告してもらって、会員とひもつけるしかないか。<br>
+<br>
+<h2>HRD Migration</h2>
+現象<br>
+https://developers.google.com/appengine/docs/adminconsole/migration
+にしたがって、App Engine アプリケーションを HRD に移行しようとすると、
+Migration Tool の画面で、
+<pre>
+Please deploy your application code and index configuration on your target application before beginning the migration.
+</pre>
+といわれる。<br>
+対策<br>
+app.yaml の application: に、 -hrd をつけた名前を指定して、appcfg.py update する。ま、そりゃそうだね。
 
 <h2>App Engine OpenID login が Server Error 500</h2>
 現象<br>

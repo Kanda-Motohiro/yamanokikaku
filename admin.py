@@ -16,11 +16,13 @@ from util import *
 class KaiinTouroku(webapp2.RequestHandler):
     "会員の名簿をファイルでもらって、Kaiin に入れる。"
     def get(self):
-        body = u"""Please select kaiin.csv file and push the 'Send' button.<br>
-        <form action='/admin/kaiin' method='post' enctype='multipart/form-data'>
-        <input type='file' name='file'><br>
-        <input type='submit' value='Send'><br>
-        </form>"""
+        body = u"""<p>会員一覧を、カンマ区切りで表した、
+        kaiin.csv あるいは、類似の名前のファイルを
+        指定して、「送信」ボタンを押して下さい。</p>
+        <p><form action='/admin/kaiin' method='post' enctype='multipart/form-data'></p>
+        <p><input type='file' name='file'></p>
+        <p><input type='submit' value='送信'></p>
+        </form></p>"""
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
     def post(self):
@@ -33,16 +35,17 @@ class KaiinTouroku(webapp2.RequestHandler):
             rec = Kaiin(no=int(els[0]), name=els[1], openid=els[2])
             rec.put()
 
-        #render_template_and_write_in_sjis(self, 'blank.tmpl', uni)
         self.redirect("/")
 
-class BulkLoad(webapp2.RequestHandler):
+class KikakuTouroku(webapp2.RequestHandler):
     "山行企画一覧をファイルでもらって、Kikaku に入れる。"
     def get(self):
-        body = u"""Please select sankouannnai-yotei.csv file and push the 'Send' button.<br>
-        <form action='/admin/bulkload' method='post' enctype='multipart/form-data'>
-        <input type='file' name='file'><br>
-        <input type='submit' value='Send'><br>
+        body = u"""<p>山行企画一覧を、カンマ区切りで表した、
+        sankouannnai-yotei.csv あるいは、類似の名前のファイルを
+        指定して、「送信」ボタンを押して下さい。</p>
+        <p><form action='/admin/kikaku' method='post' enctype='multipart/form-data'></p>
+        <p><input type='file' name='file'></p>
+        <p><input type='submit' value='送信'></p>
         </form>"""
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
@@ -93,6 +96,7 @@ class BulkLoad(webapp2.RequestHandler):
 
 class InitLoad(webapp2.RequestHandler):
     def get(self):
+        "テストのため、データベースを入れる。"
         dbgprint("InitLoad")
         rec = Kikaku(no = 243, title = u"薬師岳、雲の平", rank = "C-C-8.5",
             start = tukihi2Date(u"8月8日"), end = tukihi2Date(u"8月12日"),
@@ -105,10 +109,20 @@ class InitLoad(webapp2.RequestHandler):
             shimekiri = tukihi2Date(u"6月28日"), teiin = 0,
             leaders = [u"田辺", u"居関"])
         rec.put()
+
+        rec = Kaiin(no=9002, name=u"平山ユージ", openid="test@example.com")
+        rec.put()
+
         self.response.out.write('<html><body>done</body></html>')
 
 class DeleteAll(webapp2.RequestHandler):
     def get(self):
+        "テストのため、データベースを消す。"
+
+        # 本番機は、admin console から。
+        if self.request.environ.get("SERVER_NAME") != "localhost":
+            self.error(403)
+            return
         for rec in Kikaku.all():
             db.delete(rec)
         for rec in Kaiin.all():
@@ -121,6 +135,6 @@ app = webapp2.WSGIApplication([
     ('/admin/initload', InitLoad),
 
     ('/admin/kaiin', KaiinTouroku),
-    ('/admin/bulkload', BulkLoad)
+    ('/admin/kikaku', KikakuTouroku)
     ], debug=True)
 # eof

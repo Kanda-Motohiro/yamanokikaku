@@ -115,7 +115,9 @@ def err(handler, message):
     out = u"""yamanokikaku: ご迷惑をおかけしております。
 システムエラーが発生しました。<br>""" + unicode(els) + unicode(message)
 
-    handler.response.out.write('<html><body>%s</body></html>' % out)
+    handler.response.headers['Content-Type'] = "text/html; charset=cp932"
+    handler.response.out.write('<html><body>%s</body></html>' % \
+        out.encode("cp932", "replace"))
     return
 
 def _test():

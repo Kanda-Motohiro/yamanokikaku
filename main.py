@@ -5,7 +5,12 @@
 # Licensed under the Apache License, Version 2.0
 
 """todo
-https://developers.google.com/appengine/docs/python/python27/migrate27#appyaml
+client.py で、ユニットテスト、カバレッジ。有効な企画のキーを得る。
+ログイン状態とする。あるいは、サーバーで、ローカルならバイパスさせる。
+なんか、クッキーに入っているのかな。
+main テーブル表示する。
+参加者の山行履歴
+確認のメールを発信。
 """
 import os
 import wsgiref.handlers
@@ -85,18 +90,18 @@ def getKeyAndUser(handler):
     実は、ニックネームと、データベースレコードの参照になったもの。"""
     key = handler.request.get('key')
     if not key:
-        logerr("no key")
+        logerror("no key")
         return None, None, None
 
     try:
         rec = db.get(key)
     except db.BadKeyError:
-        logerr("bad key", key)
+        logerror("bad key", key)
         return None, None, None
 
     user = users.get_current_user()
     if not user:
-        logerr("no user")
+        logerror("no user")
         return None, None, None
 
     no, name = openid2KaiinNoAndName(user.nickname())
@@ -111,11 +116,11 @@ class Apply(webapp2.RequestHandler):
         "山行企画に申し込む。企画のキーが渡る。"
         rec, no, user = getKeyAndUser(self)
         if rec is None:
-            err("invalid user/key")
+            err(self, "invalid user/key")
             return
 
         if user in rec.members:
-            err("dup user")
+            err(self, "dup user")
             return
 
         # 参加者一覧に、このユーザーを追加する。
@@ -129,11 +134,11 @@ class Cancel(webapp2.RequestHandler):
         "山行企画の申し込みをキャンセルする。"
         rec, no, user = getKeyAndUser(self)
         if rec is None:
-            err("invalid user/key")
+            err(self, "invalid user/key")
             return
 
         if not user in rec.members:
-            err("no user")
+            err(self, "no user")
             return
 
         # 参加者一覧から、このユーザーを削除する。
@@ -148,7 +153,7 @@ class Detail(webapp2.RequestHandler):
         " 山行企画を表示し、申し込みとキャンセルのリンクをつける。"
         rec, no, user = getKeyAndUser(self)
         if user is None:
-            err("invalid user/key")
+            err(self, "invalid user/key")
             return
 
         moushikomi = ""
@@ -230,7 +235,11 @@ class Login(webapp2.RequestHandler):
             "<p><a href='%s'>yahoo</a></p>" % \
             users.create_login_url(federated_identity='yahoo.co.jp')
 
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body +
+            u"""他に、ご使用の OpenID プロバイダーがありましたら、ご連絡下さい。
+            <br>ご注意。携帯電話からは、うまくログインできないことがあります。
+            おそれいりますが、そのときは、パソコン、スマートフォンなどから
+            ご利用下さい。""")
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),
