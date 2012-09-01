@@ -43,27 +43,33 @@ class Kikaku(db.Model):
 
         return u"リーダー:%s メンバー:%s" % (leaders, members)
 
-    def __repr__(self):
+    def teiinStr(self):
         # 定員、なし。いくらでも受付可能というのは、イレギュラーなので注意。
         if self.teiin == 0:
-            teiin = u"なし"
+            return u"なし"
         else:
-            teiin = u"%d人" % self.teiin
+            return u"%d人" % self.teiin
+
+    def kijitu(self):
         if self.start == self.end:
             end = ""
         else:
             end = u"-" + date2Tukihi(self.end)
 
+        return date2Tukihi(self.start) + end
+
+    def shimekiribi(self):
         # 締切日。指定なし、というのもある。
         if self.shimekiri == shimekiriNashi:
-            shimekiri = u"なし"
+            return u"なし"
         else:
-            shimekiri = date2Tukihi(self.shimekiri)
+            return date2Tukihi(self.shimekiri)
 
+    def __repr__(self):
         # no は、リンクにするので、ここでは返さない。
-        return u"%s %s 期日:%s%s 締切日:%s 定員:%s 現在:%d 人" % \
-           (self.title, self.rank, date2Tukihi(self.start),
-           end, shimekiri, teiin, len(self.members))
+        return u"%s %s 期日:%s 締切日:%s 定員:%s 現在:%d 人" % \
+           (self.title, self.rank, self.kijitu(),
+           self.shimekiribi(), self.teiinStr(), len(self.members))
 # end class
 
 class Kaiin(db.Model):
@@ -183,40 +189,68 @@ class MainPage(webapp2.RequestHandler):
         user = users.get_current_user()
         if not user:
             body = u"""申し込みなどをするには、
-            <a href='/login'>ログイン</a>して下さい。<br>"""
+            <a href='/login'>ログイン</a>して下さい。"""
         else:
             no, name = openid2KaiinNoAndName(user.nickname())
-            body = u'こんにちわ %s さん。<a href="%s">ログアウト</a><br>' % \
+            body = u'こんにちわ %s さん。<a href="%s">ログアウト</a>。' % \
                 (name, users.create_logout_url(self.request.uri))
 
         # 山行企画一覧を表示する。会員には、申し込みもできる詳細ページの
         # リンクを示す。
         # 今は、デモなので、会員名簿がない。ログインしたら、会員とみなす。
 
-        # 今月以降の企画を表示する。
-        y = datetime.date.today().year
-        m = datetime.date.today().month
-        start = datetime.date(y, m, 1)
-        # だけど、デモなので、しばらくはこうする。
-        start = datetime.date(2012, 6, 1)
-
-        query =  db.GqlQuery("SELECT * FROM Kikaku WHERE start >= :1 ORDER BY start ASC", start)
-
-        kikakuList = []
-        for rec in query:
-            if user:
-                kikaku = "<a href='/detail?key=%s'>No. %d</a> " % (rec.key(), rec.no)
-            else:
-                kikaku = "No. %d " % rec.no
-
-            kikaku += unicode(rec)
-            kikakuList.append(kikaku)
-
-        body += u"<h2>山行案内一覧</h2>" + "<br>\n".join(kikakuList)
+        body += u"&nbsp;<a href='/table'>表形式で見る</a><br>" + SankouKikakuIchiran()
 
         render_template_and_write_in_sjis(self, 'main.tmpl', body)
+        return
 
 # end MainPage
+
+def SankouKikakuIchiran(table=False):
+    """山行企画の一覧を、ユニコードの HTML で返す。
+    table=True のときは、テーブルタグを使う。
+    """
+    # 今月以降の企画を表示する。
+    y = datetime.date.today().year
+    m = datetime.date.today().month
+    start = datetime.date(y, m, 1)
+    # だけど、デモなので、しばらくはこうする。
+    start = datetime.date(2012, 6, 1)
+
+    query =  db.GqlQuery("SELECT * FROM Kikaku WHERE start >= :1 ORDER BY start ASC", start)
+
+    user = users.get_current_user()
+    kikakuList = []
+    for rec in query:
+        if user:
+            no = "<a href='/detail?key=%s'>No. %d</a> " % (rec.key(), rec.no)
+        else:
+            no = "No. %d " % rec.no
+
+        if not table:
+            kikaku = no + unicode(rec)
+        else:
+            kikaku = u"""<tr>
+            <td>%s</td><td>%s</td><td>%s</td><td>%s</td>
+            <td>%s</td><td>%s</td><td>%d</td>
+            </tr>""" % \
+            (no, rec.title, rec.rank, rec.kijitu(),
+            rec.shimekiribi(), rec.teiinStr(), len(rec.members))
+        kikakuList.append(kikaku)
+
+    if not table:
+        return u"<h2>山行案内一覧</h2>" + "<br>\n".join(kikakuList)
+    else:
+        return u"<h2>山行案内一覧</h2>" + "<table border=1>" + \
+        u"""<tr><th>番号</th><th>名称</th><th>ランク</th><th>期日</th>
+        <th>締め切り</th><th>定員</th><th>現在</th></tr>""" + \
+        "\n".join(kikakuList) + "</table>"
+
+class Table(webapp2.RequestHandler):
+    def get(self):
+        body = SankouKikakuIchiran(table=True)
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        return
 
 class Login(webapp2.RequestHandler):
     def get(self):
@@ -244,6 +278,7 @@ class Login(webapp2.RequestHandler):
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/login', Login),
+    ('/table', Table),
     ('/detail', Detail),
     ('/apply', Apply),
     ('/cancel', Cancel)
