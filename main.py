@@ -67,7 +67,7 @@ class Kikaku(db.Model):
 
     def __repr__(self):
         # no は、リンクにするので、ここでは返さない。
-        return u"%s %s 期日:%s 締切日:%s 定員:%s 現在:%d 人" % \
+        return u"%s %s 期日:%s 締切日:%s 定員:%s 現在:%d人" % \
            (self.title, self.rank, self.kijitu(),
            self.shimekiribi(), self.teiinStr(), len(self.members))
 # end class
@@ -106,6 +106,10 @@ def getKeyAndUser(handler):
     except db.BadKeyError:
         logerror("bad key", key)
         return None, None, "bad key"
+
+    if rec is None:
+        logerror("no record", key)
+        return None, None, "no record"
 
     user = users.get_current_user()
     if not user:
@@ -201,7 +205,7 @@ class MainPage(webapp2.RequestHandler):
         # リンクを示す。
         # 今は、デモなので、会員名簿がない。ログインしたら、会員とみなす。
 
-        body += u"&nbsp;<a href='/table'>表形式で見る</a><br>" + SankouKikakuIchiran()
+        body += SankouKikakuIchiran()
 
         render_template_and_write_in_sjis(self, 'main.tmpl', body)
         return
@@ -233,9 +237,9 @@ def SankouKikakuIchiran(table=False):
             kikaku = no + unicode(rec)
         else:
             kikaku = u"""<tr>
-            <td>%s</td><td>%s</td><td>%s</td><td>%s</td>
-            <td>%s</td><td>%s</td><td>%d</td>
-            </tr>""" % \
+<td>%s</td><td>%s</td><td>%s</td><td>%s</td>
+<td>%s</td><td>%s</td><td>%d</td>
+</tr>""" % \
             (no, rec.title, rec.rank, rec.kijitu(),
             rec.shimekiribi(), rec.teiinStr(), len(rec.members))
         kikakuList.append(kikaku)
@@ -245,7 +249,7 @@ def SankouKikakuIchiran(table=False):
     else:
         return u"<h2>山行案内一覧</h2>" + "<table border=1>" + \
         u"""<tr><th>番号</th><th>名称</th><th>ランク</th><th>期日</th>
-        <th>締め切り</th><th>定員</th><th>現在</th></tr>""" + \
+<th>締め切り</th><th>定員</th><th>現在</th></tr>""" + \
         "\n".join(kikakuList) + "</table>"
 
 class Table(webapp2.RequestHandler):
@@ -256,26 +260,16 @@ class Table(webapp2.RequestHandler):
 
 class Login(webapp2.RequestHandler):
     def get(self):
-        user = users.get_current_user()
-        if user:
-            body = u'<a href="%s">ログアウト</a>' % \
-                users.create_logout_url(self.request.uri)
-        else:
-            body = u"お持ちのID でログインください。<br>" + \
-            "<p><a href='%s'>google</a></p>" % \
-            users.create_login_url(federated_identity='www.google.com/accounts/o8/id') + \
-            "<p><a href='%s'>mixi</a></p>" % \
-            users.create_login_url(federated_identity='mixi.jp') + \
-            "<p><a href='%s'>biglobe</a></p>" % \
-            users.create_login_url(federated_identity='openid.biglobe.ne.jp') + \
-            "<p><a href='%s'>yahoo</a></p>" % \
-            users.create_login_url(federated_identity='yahoo.co.jp')
+        body = "<p><a href='%s'>google</a></p>" % \
+        users.create_login_url(federated_identity='www.google.com/accounts/o8/id') + \
+        "<p><a href='%s'>mixi</a></p>" % \
+        users.create_login_url(federated_identity='mixi.jp') + \
+        "<p><a href='%s'>biglobe</a></p>" % \
+        users.create_login_url(federated_identity='openid.biglobe.ne.jp') + \
+        "<p><a href='%s'>yahoo</a></p>" % \
+        users.create_login_url(federated_identity='yahoo.co.jp')
 
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body +
-            u"""他に、ご使用の OpenID プロバイダーがありましたら、ご連絡下さい。
-            <br>ご注意。携帯電話からは、うまくログインできないことがあります。
-            おそれいりますが、そのときは、パソコン、スマートフォンなどから
-            ご利用下さい。""")
+        render_template_and_write_in_sjis(self, 'login.tmpl', body)
 
 class Debug(webapp2.RequestHandler):
     def get(self):
