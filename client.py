@@ -89,7 +89,7 @@ kikakuFiles = ("sankouannnai-yotei.csv", "utf-8", "euc", "sankouannnai-yotei.csv
 def main():
     if "--admin" in sys.argv:
         # app.yaml で、login:admin を外すこと
-
+        login()
         doit("admin/deleteall") # これを最初にやる。
 
         for f in kaiinFiles:

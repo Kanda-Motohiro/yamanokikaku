@@ -13,13 +13,12 @@ main テーブル表示する。
 確認のメールを発信。
 """
 import os
+import datetime
 import wsgiref.handlers
 from google.appengine.ext import db
 from google.appengine.api import users
-import datetime
 import webapp2
 
-import settings
 from util import *
 
 class Kikaku(db.Model):
@@ -176,7 +175,9 @@ class Detail(webapp2.RequestHandler):
 
         # 締切日をすぎていれば、申し込みは表示しない。
         #elif rec.shimekiri < datetime.date.today():
-        #    moushikomi = ""
+        # デモなので、この日付とする。
+        elif rec.shimekiri < datetime.date(2012, 9, 1):
+            moushikomi = ""
 
         # 定員を超えていれば、おなじく。
         # 定員ゼロは、無限に受付。
@@ -198,7 +199,7 @@ class MainPage(webapp2.RequestHandler):
             <a href='/login'>ログイン</a>して下さい。"""
         else:
             no, name = openid2KaiinNoAndName(user.nickname())
-            body = u'こんにちわ %s さん。<a href="%s">ログアウト</a>。' % \
+            body = u'こんにちわ %s さん。申し込み、取り消しをするには、番号をクリックして下さい。&nbsp;<a href="%s">ログアウト</a>。' % \
                 (name, users.create_logout_url(self.request.uri))
 
         # 山行企画一覧を表示する。会員には、申し込みもできる詳細ページの
@@ -229,12 +230,12 @@ def SankouKikakuIchiran(table=False):
     kikakuList = []
     for rec in query:
         if user:
-            no = "<a href='/detail?key=%s'>No. %d</a> " % (rec.key(), rec.no)
+            no = "<a href='/detail?key=%s'>%d</a> " % (rec.key(), rec.no)
         else:
-            no = "No. %d " % rec.no
+            no = "%d " % rec.no
 
         if not table:
-            kikaku = no + unicode(rec)
+            kikaku = "No." + no + unicode(rec)
         else:
             kikaku = u"""<tr>
 <td>%s</td><td>%s</td><td>%s</td><td>%s</td>
