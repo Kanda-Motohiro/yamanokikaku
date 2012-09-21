@@ -138,7 +138,13 @@ Errors while decoding form arguments to Unicode are ignored. The constructor for
 self.request.get("file")
 </pre>
 で、文字コード変換してないファイルの中身がとれた。昔は、ここで、ascii 
-以外の文字が落ちたのだが、webapp2 はうまくできるらしい。
+以外の文字が落ちたのだが、webapp2 はうまくできるらしい。<br>
+なお、これは、ファイルでない場合。<br>
+http://docs.webob.org/en/latest/reference.html#query-post-variables<br>
+Unicode Variables<br>
+<pre>
+>>> req.charset = 'utf8'
+</pre>
 
 <h2>django 1.2 sjis template</h2>
 今、私は、シフトJIS でテンプレートを書いているが、これができなくなる？

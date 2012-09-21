@@ -74,6 +74,24 @@ mainActions = [ "", "login", "table",
 "noSuchUrl", ""
 ]
 
+def doKaiinPost():
+    for form in ({'invalid-key':'hello'}, {'no':'1234'}, {'name':'Tanabe'},
+ {'no':'hello', 'name':'Tabei'},
+ {'no':'9000', 'name':'Tabei'},
+ {'no':'9002', 'name':u'田部井'.encode("utf8")},
+ {'no':'9003', 'name':u'田部井'.encode("EUCJP")},
+ {'no':'9009', 'name':u'田部井'.encode("cp932")}
+ ):
+        print "\n#### " + str(form) + " ####\n"
+
+        param = urllib.urlencode(form)
+        request = urllib2.Request(host + "kaiin", param, headers)
+        try:
+            f = urllib2.urlopen(request)
+        except urllib2.URLError, e:
+            continue
+        printOrRaise(f, 20)
+
 def postAFile(urlpath, filename):
     " from http://atlee.ca/software/poster/ "
     print "\n#### " + urlpath + " " + filename + " ####\n"
@@ -106,10 +124,12 @@ def main():
     fetchAValidKey()
     for action in mainActions:
         doit(action)
+    doKaiinPost()
     print "\n#### LOGGED IN ####\n"
     login()
     for action in mainActions:
         doit(action)
+    doKaiinPost()
     logout()
     
 if __name__ == '__main__':

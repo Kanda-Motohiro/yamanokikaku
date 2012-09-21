@@ -5,12 +5,10 @@
 # Licensed under the Apache License, Version 2.0
 
 """todo
-client.py で、ユニットテスト、カバレッジ。有効な企画のキーを得る。
-ログイン状態とする。あるいは、サーバーで、ローカルならバイパスさせる。
-なんか、クッキーに入っているのかな。
-main テーブル表示する。
 参加者の山行履歴
 確認のメールを発信。
+バックアップ。
+申し込みと取り消しは、履歴として、保存する。
 """
 import os
 import datetime
@@ -177,7 +175,7 @@ class Detail(webapp2.RequestHandler):
         #elif rec.shimekiri < datetime.date.today():
         # デモなので、この日付とする。
         elif rec.shimekiri < datetime.date(2012, 9, 1):
-            moushikomi = ""
+            moushikomi = u"申し込みは締めきりました"
 
         # 定員を超えていれば、おなじく。
         # 定員ゼロは、無限に受付。
@@ -187,9 +185,84 @@ class Detail(webapp2.RequestHandler):
             moushikomi = u"<a href='/apply?key=%s'>申し込む</a>" % rec.key()
         
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
-            rec.detail() + " " + moushikomi + "<br>\n"
+            rec.detail() + "<br>\n" + moushikomi + "<br>\n"
 
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+
+class KaiinTouroku(webapp2.RequestHandler):
+    def get(self):
+        "山岳会の会員番号、氏名と、openid の対応をもらう。"
+        user = users.get_current_user()
+        # 変だな。ここに来るはずはないのに。
+        if not user:
+            self.redirect("/login")
+            return
+
+        body = u"""あなたの山岳会での会員番号、氏名を入力下さい。<br> 
+        <p><form action='/kaiin' method='post' enctype='multipart/form-data'></p>
+        <p><input type='text' name='no' size='8'>会員番号</p>
+        <p><input type='text' name='name' size='20'> 氏名</p>
+        <p><input type='submit' value='登録'></p>
+        </form></p>"""
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+
+    def post(self):
+        # 氏名はシフトJIS で来るはず
+        self.request.charset = "cp932"
+        try:
+            # ここで文字コード変換するので、
+            name = self.request.get("name")
+        except UnicodeDecodeError, e:
+            # いちおう、これも試してみよう
+            self.request.charset = "utf8"
+            try:
+                name = self.request.get("name")
+            except UnicodeDecodeError, e:
+                err(self, "%s" % (e))
+                return
+            
+        no = self.request.get("no")
+        if no != "":
+            try:
+                no = int(no)
+            except ValueError, e:
+                no = ""
+
+        if no == "" or name == "":
+            body = u"""会員番号（数字）とご氏名を入力下さい。<br>
+            <a href="/kaiin">入力しなおす</a>。<br>
+            """
+            render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+            return
+
+        user = users.get_current_user()
+        if not user:
+            err(self, "no user at post")
+            return
+
+        openid=user.nickname()
+
+        # 会員でない人が、openid アカウントで登録してきたらどうするか。
+        # 手元には、有効な会員と氏名の一覧を持たないので、受け入れるしか無い。
+        # 少なくとも、１つのアカウントで、１つの会員レコードしか作っては
+        # いけない
+        # 自分の名前を間違えたので、入れなおし、は拒んではいけない。
+
+        query =  db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1", openid)
+        recs = query.fetch(1)
+
+        # あれば、更新。なければ、作成。
+        if recs:
+            rec = recs[0]
+            dbgprint("changed no %d->%d name %s->%s" % (rec.no, no, rec.name, name))
+            rec.no = no
+            rec.name = name
+        else:
+            rec = Kaiin(no=no, name=name, openid=openid)
+            dbgprint("new kaiin no %d name %s" % (no, name))
+
+        rec.put()
+        self.redirect("/")
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
@@ -201,6 +274,9 @@ class MainPage(webapp2.RequestHandler):
             no, name = openid2KaiinNoAndName(user.nickname())
             body = u'こんにちわ %s さん。申し込み、取り消しをするには、番号をクリックして下さい。&nbsp;<a href="%s">ログアウト</a>。' % \
                 (name, users.create_logout_url(self.request.uri))
+            if no == -1:
+                body += u"""<br><a href="/kaiin">会員番号を入力</a>していただくと、
+よりわかりやすい表示になります。"""
 
         # 山行企画一覧を表示する。会員には、申し込みもできる詳細ページの
         # リンクを示す。
@@ -292,6 +368,7 @@ app = webapp2.WSGIApplication([
     ('/login', Login),
     ('/table', Table),
     ('/detail', Detail),
+    ('/kaiin', KaiinTouroku),
     ('/debug', Debug),
     ('/apply', Apply),
     ('/cancel', Cancel)
