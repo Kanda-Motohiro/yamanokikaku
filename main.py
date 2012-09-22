@@ -175,7 +175,9 @@ class Detail(webapp2.RequestHandler):
         #elif rec.shimekiri < datetime.date.today():
         # デモなので、この日付とする。
         elif rec.shimekiri < datetime.date(2012, 9, 1):
-            moushikomi = u"申し込みは締めきりました"
+            moushikomi = u"""申し込みは締めきりました。<br>
+デモのため、現在日付を、９月１日にしています。これより前の締切日の企画は、
+申し込みをできなくしてあります。"""
 
         # 定員を超えていれば、おなじく。
         # 定員ゼロは、無限に受付。
@@ -229,7 +231,7 @@ class KaiinTouroku(webapp2.RequestHandler):
                 no = ""
 
         if no == "" or name == "":
-            body = u"""会員番号（数字）とご氏名を入力下さい。<br>
+            body = u"""会員番号（半角数字）とご氏名を入力下さい。<br>
             <a href="/kaiin">入力しなおす</a>。<br>
             """
             render_template_and_write_in_sjis(self, 'blank.tmpl', body)
