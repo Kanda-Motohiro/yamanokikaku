@@ -205,7 +205,10 @@ class KaiinTouroku(webapp2.RequestHandler):
         <p><input type='text' name='no' size='8'>会員番号</p>
         <p><input type='text' name='name' size='20'> 氏名</p>
         <p><input type='submit' value='登録'></p>
-        </form></p>"""
+        </form></p>
+        これに加えて、緊急連絡先も登録してもらう必要があるでしょう。
+        そこは、まだ、作ってありません。"""
+
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
     def post(self):
