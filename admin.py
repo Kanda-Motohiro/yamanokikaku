@@ -122,10 +122,27 @@ class InitLoad(webapp2.RequestHandler):
 
         self.response.out.write('<html><body>done</body></html>')
 
+class DumpKikaku(webapp2.RequestHandler):
+    def get(self):
+        out = []
+        for rec in Kikaku.all():
+            out += unicode(rec) + "<br>\n"
+
+        render_template_and_write_in_sjis(self, 'blank.tmpl', "".join(out))
+        return
+
+class DumpKaiin(webapp2.RequestHandler):
+    def get(self):
+        out = []
+        for rec in Kaiin.all():
+            out += unicode(rec) + "<br>\n"
+
+        render_template_and_write_in_sjis(self, 'blank.tmpl', "".join(out))
+        return
+
 class DeleteAll(webapp2.RequestHandler):
     def get(self):
         "テストのため、データベースを消す。"
-
         # 本番機は、admin console から。
         if self.request.environ.get("SERVER_NAME") != "localhost":
             self.error(403)
@@ -142,6 +159,8 @@ app = webapp2.WSGIApplication([
     ('/admin/initload', InitLoad),
 
     ('/admin/kaiin', KaiinTouroku),
+    ('/admin/dumpkaiin', DumpKaiin),
+    ('/admin/dumpkikaku', DumpKikaku),
     ('/admin/kikaku', KikakuTouroku)
     ], debug=True)
 # eof
