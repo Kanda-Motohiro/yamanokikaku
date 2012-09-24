@@ -8,7 +8,6 @@
 参加者の山行履歴
 確認のメールを発信。
 バックアップ。
-申し込みと取り消しは、履歴として、保存する。
 事務局による、FAX からの転載による応募
 しめきり処理。参加者名簿を印刷、リーダーにメール送信。
 """
@@ -100,6 +99,10 @@ class Kaiin(db.Model):
 
     kanyuuHoken = db.StringProperty() # 山岳保険、ハイキング保険
 
+    def displayName(self):
+        "番号と氏名を、組でよく使う。"
+        return u"%d %s" % (self.no, self.name)
+
     def __repr__(self):
         return u"""no=%d %s %s 電話=%s fax=%s メール=%s 住所=%s
         緊急連絡先 %s %s %s %s  最近行った山 %s %s %s %s
@@ -151,7 +154,7 @@ class MoushikomiRireki(db.Model):
 
     #kaiin = db.ReferenceProperty()
     #kikaku = db.ReferenceProperty()
-""" XXX 参照にするには、openid2KaiinNoAndName を、class Kaiin を返すように
+""" XXX 参照にするには、openid2Kaiin を、class Kaiin を返すように
 なおす必要がある。さらに、apply/cancel は、管理者が他の人の代わりに
 応募する場合、class Kaiin key をもらう必要がある。"""
 
@@ -160,46 +163,46 @@ class MoushikomiRireki(db.Model):
 
 
 
-def openid2KaiinNoAndName(openid):
-    "OpenID ニックネームをもらい、会員かどうか見る。"
+def openid2Kaiin(openid):
+    "OpenID ニックネームをもらい、会員レコードを返す。"
     query =  db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1", openid)
     recs = query.fetch(1)
     if recs:
-        k = recs[0]
-        # どうせ、会員番号と氏名で使うので、ここで name はその形にしておく。
-        return k.no, u"%d %s" % (k.no, k.name)
+        return recs[0]
     else:
-        # 会員でない人は、番号 -1 を返し、openid nickname をそのまま返す。
-        return -1, openid
+        return None
 
-def getKeyAndUser(handler):
-    """申し込みとキャンセルで使われる、ユーザーと企画のキーを返す。
-    実は、ニックネームと、データベースレコードの参照になったもの。
-    ついでに、エラーがいろいろあるので、最後の戻り値に文字列で返す。
+def getKikakuAndKaiin(handler):
+    """申し込みとキャンセルで使われる、企画と会員レコードを返す。
+    エラーがいろいろあるので、最初の戻り値に文字列で返す。
+    基本的に、これらは、バグ。
     """
     key = handler.request.get('key')
     if not key:
         logerror("no key")
-        return None, None, "no key"
+        return "no key", None
 
     try:
         rec = db.get(key)
     except db.BadKeyError:
         logerror("bad key", key)
-        return None, None, "bad key"
+        return "bad key", None
 
     if rec is None:
         logerror("no record", key)
-        return None, None, "no record"
+        return "no record", None
 
     user = users.get_current_user()
     if not user:
         logerror("no user")
-        return None, None, "no user"
+        return "no user", None
 
-    no, name = openid2KaiinNoAndName(user.nickname())
+    kaiin = openid2Kaiin(user.nickname())
+    if not kaiin:
+        logerror("not kaiin")
+        return "not kaiin", None
 
-    return rec, no, name
+    return rec, kaiin
 
 #
 # handlers
@@ -207,60 +210,63 @@ def getKeyAndUser(handler):
 class Apply(webapp2.RequestHandler):
     def get(self):
         "山行企画に申し込む。企画のキーが渡る。"
-        rec, no, user = getKeyAndUser(self)
-        if rec is None:
-            err(self, "invalid user/key " + user)
+        rec, user = getKikakuAndKaiin(self)
+        if isinstance(rec, str):
+            err(self, "invalid user/key " + rec)
             return
 
-        if user in rec.members:
+        name = user.displayName()
+        if name in rec.members:
             err(self, "dup user")
             return
 
         # 参加者一覧に、このユーザーを追加する。
-        rec.members.append(user)
+        rec.members.append(name)
         rec.put()
 
         rireki = MoushikomiRireki(applyCancel="a",
-            kaiin=user, kikakuNo=rec.no, kikakuTitle=rec.title)
+            kaiin=name, kikakuNo=rec.no, kikakuTitle=rec.title)
         rireki.put()
-        dbgprint("%s applied for %d %s" % (user, rec.no, rec.title))
+        dbgprint("%s applied for %d %s" % (name, rec.no, rec.title))
         self.redirect("/detail?key=%s" % rec.key())
 
 class Cancel(webapp2.RequestHandler):
     def get(self):
         "山行企画の申し込みをキャンセルする。"
-        rec, no, user = getKeyAndUser(self)
-        if rec is None:
-            err(self, "invalid user/key " + user)
+        rec, user = getKikakuAndKaiin(self)
+        if isinstance(rec, str):
+            err(self, "invalid user/key " + rec)
             return
 
-        if not user in rec.members:
+        name = user.displayName()
+
+        if not name in rec.members:
             err(self, "no user")
             return
 
         # 参加者一覧から、このユーザーを削除する。
-        i = rec.members.index(user)
+        i = rec.members.index(name)
         del rec.members[i]
         rec.put()
 
         rireki = MoushikomiRireki(applyCancel="c",
-            kaiin=user, kikakuNo=rec.no, kikakuTitle=rec.title)
+            kaiin=name, kikakuNo=rec.no, kikakuTitle=rec.title)
         rireki.put()
-        dbgprint("%s canceled for %d %s" % (user, rec.no, rec.title))
+        dbgprint("%s canceled for %d %s" % (name, rec.no, rec.title))
         self.redirect("/detail?key=%s" % rec.key())
 
 class Detail(webapp2.RequestHandler):
     def get(self):
         " 山行企画を表示し、申し込みとキャンセルのリンクをつける。"
-        rec, no, user = getKeyAndUser(self)
-        if rec is None:
-            err(self, "invalid user/key " + user)
+        rec, user = getKikakuAndKaiin(self)
+        if isinstance(rec, str):
+            err(self, "invalid user/key " + rec)
             return
 
         moushikomi = ""
         # 自分の申し込みは、取り消せる。
         # 同じ所に２度、申し込みはできない。
-        if user in rec.members:
+        if user.displayName() in rec.members:
             moushikomi = u"<a href='/cancel?key=%s'>取り消す</a>" % rec.key()
 
         # 締切日をすぎていれば、申し込みは表示しない。
@@ -275,7 +281,7 @@ class Detail(webapp2.RequestHandler):
         # 定員ゼロは、無限に受付。
         #elif rec.teiin != 0 and rec.teiin <= len(rec.members):
         #    moushikomi = ""
-        elif user:
+        else:
             moushikomi = u"<a href='/apply?key=%s'>申し込む</a>" % rec.key()
         
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
@@ -347,7 +353,7 @@ class KaiinTouroku(webapp2.RequestHandler):
             return
 
         # 管理者は、任意の会員情報を生成、変更できる。
-        if users.is_current_user_admin():
+        if 0: # XXX これだと、main で、自分が誰か探せない。users.is_current_user_admin():
             openid = None
             query =  db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", f["no"])
         else:
@@ -382,18 +388,19 @@ class MainPage(webapp2.RequestHandler):
         user = users.get_current_user()
         if not user:
             body = u"""申し込みなどをするには、
-            <a href='/login'>ログイン</a>して下さい。"""
+            <a href='/login'>ログイン</a>して、会員登録をして下さい。"""
         else:
-            no, name = openid2KaiinNoAndName(user.nickname())
-            body = u'こんにちわ %s さん。申し込み、取り消しをするには、番号をクリックして下さい。&nbsp;<a href="%s">ログアウト</a>。' % \
-                (name, users.create_logout_url(self.request.uri))
-            if no == -1:
-                body += u"""<br><a href="/kaiin">会員番号を入力</a>していただくと、
-よりわかりやすい表示になります。"""
+            kaiin = openid2Kaiin(user.nickname())
+            if not kaiin:
+                body = u"""申し込みなどをするには、
+<a href='/kaiin'>会員登録</a>をして下さい。
+&nbsp;<a href="%s">ログアウト</a>。""" % users.create_logout_url(self.request.uri)
+            else:
+                body = u'こんにちわ %s さん。申し込み、取り消しをするには、番号をクリックして下さい。&nbsp;<a href="%s">ログアウト</a>。' % \
+                (kaiin.displayName(), users.create_logout_url(self.request.uri))
 
         # 山行企画一覧を表示する。会員には、申し込みもできる詳細ページの
         # リンクを示す。
-        # 今は、デモなので、会員名簿がない。ログインしたら、会員とみなす。
 
         body += SankouKikakuIchiran()
 

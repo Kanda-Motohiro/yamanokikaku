@@ -57,10 +57,7 @@ def doit(op):
         op = op.replace("KEY", validKey)
     print "\n#### " + op + " ####\n"
     request = urllib2.Request(host + op, None, headers)
-    try:
-        f = urllib2.urlopen(request)
-    except urllib2.URLError, e:
-        return
+    f = urllib2.urlopen(request)
     printOrRaise(f, 20)
 
 mainActions = [ "", "login", "table",
@@ -71,7 +68,7 @@ mainActions = [ "", "login", "table",
 "cancel", "cancel?key=no-such-key", "cancel?key=KEY",
 "cancel?key=ahBkZXZ-eWFtYW5va2lrYWt1cg0LEgZLaWtha3UY_AUM",
 
-"noSuchUrl", ""
+""
 ]
 
 tabeiFullRecord =  {'no':'9010', 
@@ -99,10 +96,7 @@ tabeiFullRecord
 
         param = urllib.urlencode(form)
         request = urllib2.Request(host + "kaiin", param, headers)
-        try:
-            f = urllib2.urlopen(request)
-        except urllib2.URLError, e:
-            continue
+        f = urllib2.urlopen(request)
         printOrRaise(f, 20)
 
 def postAFile(urlpath, filename):
@@ -134,9 +128,6 @@ def main():
             doit(op)
         sys.exit(0)
         
-    login()
-    doKaiinPost()
-    sys.exit(0)
     fetchAValidKey()
     for action in mainActions:
         doit(action)
