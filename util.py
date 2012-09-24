@@ -29,8 +29,9 @@ def render_template_and_write_in_sjis(handler, template_filename, body):
     return
 
 # 締め切りなし。当日参加が可能。datetime には、None は入らないので、
-# 西暦１年１月１日を、無効な日付として使う。
-shimekiriNashi = datetime.date.min
+# 西暦 9999/12/31 、無効な日付として使う。
+# これなら、比較をしたときに、締め切りを過ぎることがないので、よい。
+shimekiriNashi = datetime.date.max
 
 #
 # 日本語の月日と、 datetime 型の変換

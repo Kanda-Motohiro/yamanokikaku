@@ -9,6 +9,8 @@
 確認のメールを発信。
 バックアップ。
 申し込みと取り消しは、履歴として、保存する。
+事務局による、FAX からの転載による応募
+しめきり処理。参加者名簿を印刷、リーダーにメール送信。
 """
 import os
 import datetime
@@ -67,14 +69,96 @@ class Kikaku(db.Model):
         return u"%s %s 期日:%s 締切日:%s 定員:%s 現在:%d人" % \
            (self.title, self.rank, self.kijitu(),
            self.shimekiribi(), self.teiinStr(), len(self.members))
-# end class
 
 class Kaiin(db.Model):
-    "山岳会の会員"
+    """山岳会の会員
+    会員名簿は、持ちたくなかったが、リーダーに参加者の
+    緊急連絡先を伝える必要があるから、しかたないか。
+    OpenID が携帯電話から使えないようなので、
+    携帯端末の識別番号でログインさせることになるかも。
+    """
     no = db.IntegerProperty(required=True) # 会員番号 9000
     name = db.StringProperty(required=True) # 田部井淳子
-    openid = db.StringProperty(required=True) # user.nickname
-    # 携帯端末の識別番号でログインさせることになるかも。
+    openid = db.StringProperty() # user.nickname
+
+    seibetsu = db.StringProperty() # 女
+    tel = db.PhoneNumberProperty() # 046-123-4567
+    fax = db.PhoneNumberProperty()
+    mail = db.EmailProperty() # junko-tabei@gmail.com
+    address = db.PostalAddressProperty()
+
+    # 緊急連絡先
+    kinkyuName = db.StringProperty()
+    kinkyuKankei = db.StringProperty() # 夫
+    kinkyuAddress = db.PostalAddressProperty()
+    kinkyuTel = db.PhoneNumberProperty()
+
+    # 最近行った山
+    saikin0 = db.StringProperty() # 鳳凰三山　２０１２年８月
+    saikin1 = db.StringProperty()
+    saikin2 = db.StringProperty()
+
+    kanyuuHoken = db.StringProperty() # 山岳保険、ハイキング保険
+
+    def __repr__(self):
+        return u"""no=%d %s %s 電話=%s fax=%s メール=%s 住所=%s
+        緊急連絡先 %s %s %s %s  最近行った山 %s %s %s %s
+        """ % (self.no, self.name, self.seibetsu,
+        self.tel, self.fax, self.mail, self.address,
+        self.kinkyuName, self.kinkyuKankei, self.kinkyuAddress,
+        self.kinkyuTel,
+        self.saikin0, self.saikin1, self.saikin2,
+        self.kanyuuHoken)
+
+    def updateFromDict(self, f):
+        # なんか、自動的にやる方法ないんだっけ
+        if "seibetsu" in f:
+            self.seibetsu = f["seibetsu"]
+        if "tel" in f:
+            self.tel = f["tel"]
+        if "fax" in f:
+            self.fax = f["fax"]
+        if "mail" in f:
+            self.mail = f["mail"]
+        if "address" in f:
+            self.address = f["address"]
+        if "kinkyuName" in f:
+            self.kinkyuName = f["kinkyuName"]
+        if "kinkyuKankei" in f:
+            self.kinkyuKankei = f["kinkyuKankei"]
+        if "kinkyuAddress" in f:
+            self.kinkyuAddress = f["kinkyuAddress"]
+        if "kinkyuTel" in f:
+            self.kinkyuTel = f["kinkyuTel"]
+        if "saikin0" in f:
+            self.saikin0 = f["saikin0"]
+        if "saikin1" in f:
+            self.saikin1 = f["saikin1"]
+        if "saikin2" in f:
+            self.saikin2 = f["saikin2"]
+        if "kanyuuHoken" in f:
+            self.kanyuuHoken = f["kanyuuHoken"]
+
+class MoushikomiRireki(db.Model):
+    "申し込みの履歴。いつ、誰が、何に応募したか。"
+    created = db.DateTimeProperty(auto_now_add=True)
+    applyCancel = db.StringProperty() # "apply"/"cancel"
+
+    kaiin = db.StringProperty()
+
+    kikakuNo = db.IntegerProperty()
+    kikakuTitle = db.StringProperty()
+
+    #kaiin = db.ReferenceProperty()
+    #kikaku = db.ReferenceProperty()
+""" XXX 参照にするには、openid2KaiinNoAndName を、class Kaiin を返すように
+なおす必要がある。さらに、apply/cancel は、管理者が他の人の代わりに
+応募する場合、class Kaiin key をもらう必要がある。"""
+
+
+# end class
+
+
 
 def openid2KaiinNoAndName(openid):
     "OpenID ニックネームをもらい、会員かどうか見る。"
@@ -135,6 +219,10 @@ class Apply(webapp2.RequestHandler):
         # 参加者一覧に、このユーザーを追加する。
         rec.members.append(user)
         rec.put()
+
+        rireki = MoushikomiRireki(applyCancel="a",
+            kaiin=user, kikakuNo=rec.no, kikakuTitle=rec.title)
+        rireki.put()
         dbgprint("%s applied for %d %s" % (user, rec.no, rec.title))
         self.redirect("/detail?key=%s" % rec.key())
 
@@ -154,6 +242,10 @@ class Cancel(webapp2.RequestHandler):
         i = rec.members.index(user)
         del rec.members[i]
         rec.put()
+
+        rireki = MoushikomiRireki(applyCancel="c",
+            kaiin=user, kikakuNo=rec.no, kikakuTitle=rec.title)
+        rireki.put()
         dbgprint("%s canceled for %d %s" % (user, rec.no, rec.title))
         self.redirect("/detail?key=%s" % rec.key())
 
@@ -191,6 +283,47 @@ class Detail(webapp2.RequestHandler):
 
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
+def parseKaiinForm(request):
+    out = dict()
+
+    # 氏名はシフトJIS で来るはず
+    request.charset = "cp932"
+    try:
+        # ここで文字コード変換するので、
+        name = request.get("name")
+    except UnicodeDecodeError, e:
+        # いちおう、これも試してみよう
+        request.charset = "utf8"
+        try:
+            name = request.get("name")
+        except UnicodeDecodeError, e:
+            return None, "%s" % (e)
+        
+    no = request.get("no")
+    if no != "":
+        try:
+            no = int(no)
+        except ValueError, e:
+            no = ""
+
+    if name == "" or no == "":
+        error = u"""会員番号（半角数字）とご氏名を入力下さい。<br>
+            <a href="/kaiin">入力しなおす</a>。<br>
+            """
+        return None, error
+
+    out["name"] = name
+    out["no"] = no
+
+    for key in ("seibetsu", "tel", "fax", "mail", "address",
+    "kinkyuName", "kinkyuKankei", "kinkyuAddress", "kinkyuTel",
+    "saikin0", "saikin1", "saikin2", "kanyuuHoken"):
+        val = request.get(key)
+        if val != "":
+            out[key] = val
+
+    return out, ""
+
 class KaiinTouroku(webapp2.RequestHandler):
     def get(self):
         "山岳会の会員番号、氏名と、openid の対応をもらう。"
@@ -200,44 +333,12 @@ class KaiinTouroku(webapp2.RequestHandler):
             self.redirect("/login")
             return
 
-        body = u"""あなたの山岳会での会員番号、氏名を入力下さい。<br> 
-        <p><form action='/kaiin' method='post' enctype='multipart/form-data'></p>
-        <p><input type='text' name='no' size='8'>会員番号</p>
-        <p><input type='text' name='name' size='20'> 氏名</p>
-        <p><input type='submit' value='登録'></p>
-        </form></p>
-        これに加えて、緊急連絡先も登録してもらう必要があるでしょう。
-        そこは、まだ、作ってありません。"""
-
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        render_template_and_write_in_sjis(self, 'kaiin.tmpl', "")
 
     def post(self):
-        # 氏名はシフトJIS で来るはず
-        self.request.charset = "cp932"
-        try:
-            # ここで文字コード変換するので、
-            name = self.request.get("name")
-        except UnicodeDecodeError, e:
-            # いちおう、これも試してみよう
-            self.request.charset = "utf8"
-            try:
-                name = self.request.get("name")
-            except UnicodeDecodeError, e:
-                err(self, "%s" % (e))
-                return
-            
-        no = self.request.get("no")
-        if no != "":
-            try:
-                no = int(no)
-            except ValueError, e:
-                no = ""
-
-        if no == "" or name == "":
-            body = u"""会員番号（半角数字）とご氏名を入力下さい。<br>
-            <a href="/kaiin">入力しなおす</a>。<br>
-            """
-            render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        f, error = parseKaiinForm(self.request)
+        if f is None:
+            render_template_and_write_in_sjis(self, 'blank.tmpl', error)
             return
 
         user = users.get_current_user()
@@ -245,7 +346,12 @@ class KaiinTouroku(webapp2.RequestHandler):
             err(self, "no user at post")
             return
 
-        openid=user.nickname()
+        # 管理者は、任意の会員情報を生成、変更できる。
+        if users.is_current_user_admin():
+            openid = None
+            query =  db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", f["no"])
+        else:
+            openid=user.nickname()
 
         # 会員でない人が、openid アカウントで登録してきたらどうするか。
         # 手元には、有効な会員と氏名の一覧を持たないので、受け入れるしか無い。
@@ -253,19 +359,21 @@ class KaiinTouroku(webapp2.RequestHandler):
         # いけない
         # 自分の名前を間違えたので、入れなおし、は拒んではいけない。
 
-        query =  db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1", openid)
+            query =  db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1", openid)
+        # if admin
         recs = query.fetch(1)
 
         # あれば、更新。なければ、作成。
         if recs:
             rec = recs[0]
-            dbgprint("changed no %d->%d name %s->%s" % (rec.no, no, rec.name, name))
-            rec.no = no
-            rec.name = name
+            dbgprint("changed no %d->%d name %s->%s" % (rec.no, f["no"], rec.name, f["name"]))
+            rec.no = f["no"]
+            rec.name = f["name"]
         else:
-            rec = Kaiin(no=no, name=name, openid=openid)
-            dbgprint("new kaiin no %d name %s" % (no, name))
+            rec = Kaiin(no=f["no"], name=f["name"], openid=openid)
+            dbgprint("new kaiin no %d name %s" % (f["no"], f["name"]))
 
+        rec.updateFromDict(f)
         rec.put()
         self.redirect("/")
 
