@@ -392,9 +392,8 @@ class MainPage(webapp2.RequestHandler):
         else:
             kaiin = openid2Kaiin(user.nickname())
             if not kaiin:
-                body = u"""申し込みなどをするには、
-<a href='/kaiin'>会員登録</a>をして下さい。
-&nbsp;<a href="%s">ログアウト</a>。""" % users.create_logout_url(self.request.uri)
+                self.redirect("/kaiin")
+                return
             else:
                 body = u'こんにちわ %s さん。申し込み、取り消しをするには、番号をクリックして下さい。&nbsp;<a href="%s">ログアウト</a>。' % \
                 (kaiin.displayName(), users.create_logout_url(self.request.uri))
