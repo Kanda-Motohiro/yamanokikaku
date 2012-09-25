@@ -99,6 +99,9 @@ class Kaiin(db.Model):
 
     kanyuuHoken = db.StringProperty() # 山岳保険、ハイキング保険
 
+    # 申し込んだ山行企画
+    kikakuList = db.ListProperty(db.Key)
+
     def displayName(self):
         "番号と氏名を、組でよく使う。"
         return u"%d %s" % (self.no, self.name)
@@ -220,9 +223,27 @@ class Apply(webapp2.RequestHandler):
             err(self, "dup user")
             return
 
+        # この会員が、現在申し込んでいるものと、期日が重複してはいけない。
+        for key in user.kikakuList:
+            other = db.get(key)
+            if other.start <= rec.start <= other.end or \
+               other.start <= rec.end <= other.end:
+
+               body = u"""既にお申し込みの、%d %s %s と、期日が重複しています。
+               %d %s %s のお申し込みはできません。""" % \
+               (other.no, other.title, other.kijitu(), 
+               rec.no, rec.title, rec.kijitu())
+
+               render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+               return
+
         # 参加者一覧に、このユーザーを追加する。
         rec.members.append(name)
         rec.put()
+
+        # 会員の方にも、この企画を申し込んだことを覚えておく。
+        user.kikakuList.append(rec.key())
+        user.put()
 
         rireki = MoushikomiRireki(applyCancel="a",
             kaiin=name, kikakuNo=rec.no, kikakuTitle=rec.title)
@@ -248,6 +269,11 @@ class Cancel(webapp2.RequestHandler):
         i = rec.members.index(name)
         del rec.members[i]
         rec.put()
+
+        # 会員の方も、取り消し
+        i = user.kikakuList.index(rec.key())
+        del user.kikakuList[i]
+        user.put()
 
         rireki = MoushikomiRireki(applyCancel="c",
             kaiin=name, kikakuNo=rec.no, kikakuTitle=rec.title)

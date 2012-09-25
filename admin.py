@@ -135,7 +135,7 @@ class DumpKaiin(webapp2.RequestHandler):
     def get(self):
         out = []
         for rec in Kaiin.all():
-            out += unicode(rec) + "<br>\n"
+            out += unicode(rec) + str(rec.kikakuList) + "<br>\n"
 
         render_template_and_write_in_sjis(self, 'blank.tmpl', "".join(out))
         return
