@@ -32,7 +32,7 @@ class Kikaku(db.Model):
     leaders = db.StringListProperty() # リーダー　大友、三浦
     members = db.StringListProperty()
 
-    def detail(self):
+    def leadersMembers(self):
         leaders = ",".join(self.leaders)
         if 0 < len(self.members):
             members = ",".join(self.members)
@@ -285,7 +285,7 @@ class Detail(webapp2.RequestHandler):
             moushikomi = u"<a href='/apply?key=%s'>申し込む</a>" % rec.key()
         
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
-            rec.detail() + "<br>\n" + moushikomi + "<br>\n"
+            rec.leadersMembers() + "<br>\n" + moushikomi + "<br>\n"
 
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
 
@@ -430,14 +430,23 @@ def SankouKikakuIchiran(table=False):
             no = "%d " % rec.no
 
         if not table:
-            kikaku = "No." + no + unicode(rec)
+            kikaku = "No." + no + unicode(rec) + rec.leadersMembers()
         else:
+            if len(rec.members) == 0:
+                members = u""
+            elif len(rec.members) < 4:
+                members = ",".join(rec.members)
+            else:
+                members = ",".join(rec.members[:4]) + "..."
+
             kikaku = u"""<tr>
 <td>%s</td><td>%s</td><td>%s</td><td>%s</td>
 <td>%s</td><td>%s</td><td>%d</td>
-</tr>""" % \
+</tr>
+<tr><td colspan="7">リーダー:%s | メンバー:%s</td></tr>""" % \
             (no, rec.title, rec.rank, rec.kijitu(),
-            rec.shimekiribi(), rec.teiinStr(), len(rec.members))
+            rec.shimekiribi(), rec.teiinStr(), len(rec.members),
+            ",".join(rec.leaders), members)
         kikakuList.append(kikaku)
 
     if not table:
