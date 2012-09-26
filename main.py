@@ -5,7 +5,6 @@
 # Licensed under the Apache License, Version 2.0
 
 """todo
-参加者の山行履歴
 確認のメールを発信。
 バックアップ。
 事務局による、FAX からの転載による応募
@@ -32,6 +31,10 @@ class Kikaku(db.Model):
     leaders = db.StringListProperty() # リーダー　大友、三浦
     members = db.StringListProperty()
 
+    def __cmp__(self, other):
+        # start でソートする
+        return cmp(self.start, other.start)
+
     def leadersMembers(self):
         leaders = ",".join(self.leaders)
         if 0 < len(self.members):
@@ -49,6 +52,7 @@ class Kikaku(db.Model):
             return u"%d人" % self.teiin
 
     def kijitu(self):
+        "日本語で示した、開始日と終了日"
         if self.start == self.end:
             end = ""
         else:
@@ -145,6 +149,12 @@ class Kaiin(db.Model):
         if "kanyuuHoken" in f:
             self.kanyuuHoken = f["kanyuuHoken"]
 
+blankKaiin = Kaiin(no=0, name=u"未登録")
+
+def parseDisplayName(dname):
+    els = dname.split()
+    return int(els[0]), els[1]
+
 class MoushikomiRireki(db.Model):
     "申し込みの履歴。いつ、誰が、何に応募したか。"
     created = db.DateTimeProperty(auto_now_add=True)
@@ -175,37 +185,52 @@ def openid2Kaiin(openid):
     else:
         return None
 
-def getKikakuAndKaiin(handler):
-    """申し込みとキャンセルで使われる、企画と会員レコードを返す。
-    エラーがいろいろあるので、最初の戻り値に文字列で返す。
-    基本的に、これらは、バグ。
-    """
+def getKikaku(handler):
+    "山行企画のキーをもらって、データベースレコードを返す。"
     key = handler.request.get('key')
     if not key:
         logerror("no key")
-        return "no key", None
+        return "no key"
 
     try:
         rec = db.get(key)
     except db.BadKeyError:
         logerror("bad key", key)
-        return "bad key", None
+        return "bad key"
 
     if rec is None:
         logerror("no record", key)
-        return "no record", None
+        return "no record"
 
+    return rec
+
+def getKaiin():
     user = users.get_current_user()
     if not user:
         logerror("no user")
-        return "no user", None
+        return "no user"
 
     kaiin = openid2Kaiin(user.nickname())
     if not kaiin:
         logerror("not kaiin")
-        return "not kaiin", None
+        return "not kaiin"
 
-    return rec, kaiin
+    return kaiin
+
+def getKikakuAndKaiin(handler):
+    """申し込みとキャンセルで使われる、企画と会員レコードを返す。
+    エラーがいろいろあるので、最初の戻り値に文字列で返す。
+    基本的に、これらは、バグ。
+    """
+    kikaku = getKikaku(handler)
+    if isinstance(kikaku, str):
+        return kikaku, None
+
+    kaiin = getKaiin()
+    if isinstance(kaiin, str):
+        return kaiin, None
+
+    return kikaku, kaiin
 
 #
 # handlers
@@ -249,6 +274,7 @@ class Apply(webapp2.RequestHandler):
             kaiin=name, kikakuNo=rec.no, kikakuTitle=rec.title)
         rireki.put()
         dbgprint("%s applied for %d %s" % (name, rec.no, rec.title))
+
         self.redirect("/detail?key=%s" % rec.key())
 
 class Cancel(webapp2.RequestHandler):
@@ -279,6 +305,7 @@ class Cancel(webapp2.RequestHandler):
             kaiin=name, kikakuNo=rec.no, kikakuTitle=rec.title)
         rireki.put()
         dbgprint("%s canceled for %d %s" % (name, rec.no, rec.title))
+
         self.redirect("/detail?key=%s" % rec.key())
 
 class Detail(webapp2.RequestHandler):
@@ -310,10 +337,97 @@ class Detail(webapp2.RequestHandler):
         else:
             moushikomi = u"<a href='/apply?key=%s'>申し込む</a>" % rec.key()
         
+        # 応募者一覧を、その山行履歴を見られるリンクで表示する。
+        memberLinks = []
+        for dname in rec.members:
+            no, name = parseDisplayName(dname)
+            memberLinks.append(u"<a href='/sankourireki?no=%d'>%d</a> %s" %
+                (no, no, name))
+
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
-            rec.leadersMembers() + "<br>\n" + moushikomi + "<br>\n"
+            u"リーダー：%s " % ",".join(rec.leaders) + \
+            u"メンバー：%s " % ",".join(memberLinks) + \
+            "<br>\n" + moushikomi + "<br>\n" + \
+            u"""<br><a href='/shimekiri?key=%s'>応募者名簿を表示する</a>。
+            デモのため、事務局以外の一般会員からも操作できるようにしています。""" % rec.key()
 
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        return
+
+class SankouRireki(webapp2.RequestHandler):
+    def get(self):
+        "指定された会員の、今までの山行履歴を表示する。"
+        key = self.request.get("no")
+        if not key:
+            err(self, "no")
+            return
+        try:
+            no = int(key)
+        except ValueError:
+            err(self, "no=%s" % key)
+            return
+
+        query =  db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", no)
+        recs = query.fetch(1)
+        if not recs:
+            err(self, "no kaiin rec=%s" % key)
+            return
+        kaiin = recs[0]
+
+        rireki = []
+        for key in kaiin.kikakuList:
+            kikaku = db.get(key)
+            rireki.append(kikaku)
+
+        # 古い順に表示したい。ソート順は、class に定義してある。
+        rireki.sort()
+        text = []
+        for kikaku in rireki:
+            text.append("%s %d %s" % (date2Tukihi(kikaku.start), 
+                kikaku.no, kikaku.title))
+
+        body = u"<h2>%s さんの山行履歴</h2>%s<br>" % \
+            (kaiin.displayName(), "<br>\n".join(text))
+
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        return
+
+class Shimekiri(webapp2.RequestHandler):
+    def get(self):
+        """key で指定された山行企画の締切日が来たので、応募者のリストを
+        表示する。"""
+        rec = getKikaku(self)
+        if isinstance(rec, str):
+            err(self, "invalid key " + rec)
+            return
+
+        body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
+            u"リーダー：" + ",".join(rec.leaders) + "<hr>"
+
+        kaiinList = []
+        # すべての応募者の、緊急連絡先を含む、応募者名簿を表示する。
+        for dname in rec.members:
+            no, name = parseDisplayName(dname)
+
+            query =  db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", no)
+            recs = query.fetch(1)
+            if not recs:
+                dbgprint("invalid dname=%s" % dname);
+                continue
+            k= recs[0]
+
+            kaiinInfo = u"%d %s %s<br>" % (k.no, k.name, k.seibetsu) + \
+            u"電話 %s ＦＡＸ %s<br>メール %s<br>住所 %s<br>" % \
+            (k.tel, k.fax, k.mail, k.address) + \
+            u"緊急連絡先<br>氏名 %s 本人との関係 %s<br>住所 %s<br>電話 %s" % \
+            (k.kinkyuName, k.kinkyuKankei, k.kinkyuAddress, k.kinkyuTel) + \
+            "<hr>"
+
+            kaiinList.append(kaiinInfo)
+
+        body += "<br>\n".join(kaiinList)
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        return
 
 def parseKaiinForm(request):
     out = dict()
@@ -348,8 +462,8 @@ def parseKaiinForm(request):
     out["no"] = no
 
     for key in ("seibetsu", "tel", "fax", "mail", "address",
-    "kinkyuName", "kinkyuKankei", "kinkyuAddress", "kinkyuTel",
-    "saikin0", "saikin1", "saikin2", "kanyuuHoken"):
+        "kinkyuName", "kinkyuKankei", "kinkyuAddress", "kinkyuTel",
+        "saikin0", "saikin1", "saikin2", "kanyuuHoken"):
         val = request.get(key)
         if val != "":
             out[key] = val
@@ -358,14 +472,17 @@ def parseKaiinForm(request):
 
 class KaiinTouroku(webapp2.RequestHandler):
     def get(self):
-        "山岳会の会員番号、氏名と、openid の対応をもらう。"
-        user = users.get_current_user()
-        # 変だな。ここに来るはずはないのに。
-        if not user:
-            self.redirect("/login")
-            return
+        """山岳会の会員番号、氏名と、openid の対応をもらう。
+        緊急連絡先なども、入れてもらう。
+        """
+        kaiin = getKaiin()
+        # 新規登録か、更新か。
+        if isinstance(kaiin, str):
+            kaiin = blankKaiin
 
-        render_template_and_write_in_sjis(self, 'kaiin.tmpl', "")
+        body = users.create_logout_url("/")
+
+        renderKaiinTemplate(self, body, kaiin)
 
     def post(self):
         f, error = parseKaiinForm(self.request)
@@ -418,11 +535,17 @@ class MainPage(webapp2.RequestHandler):
         else:
             kaiin = openid2Kaiin(user.nickname())
             if not kaiin:
+                # ログインしたけど、会員データベースにないときは、登録画面へ
                 self.redirect("/kaiin")
                 return
             else:
-                body = u'こんにちわ %s さん。申し込み、取り消しをするには、番号をクリックして下さい。&nbsp;<a href="%s">ログアウト</a>。' % \
-                (kaiin.displayName(), users.create_logout_url(self.request.uri))
+                body = u"""こんにちわ %s さん。申し込み、取り消しをするには、
+番号をクリックして下さい。<br>
+<a href='/kaiin'>会員情報</a>&nbsp;
+<a href='/sankourireki?no=%d'>最近行った山</a>&nbsp;
+<a href='%s'>ログアウト</a>。""" % \
+                (kaiin.displayName(), kaiin.no,
+                    users.create_logout_url(self.request.uri))
 
         # 山行企画一覧を表示する。会員には、申し込みもできる詳細ページの
         # リンクを示す。
@@ -456,23 +579,28 @@ def SankouKikakuIchiran(table=False):
             no = "%d " % rec.no
 
         if not table:
-            kikaku = "No." + no + unicode(rec) + rec.leadersMembers()
+            kikaku = "No." + no + unicode(rec)
+            if user:
+                kikaku += rec.leadersMembers()
         else:
-            if len(rec.members) == 0:
-                members = u""
-            elif len(rec.members) < 4:
-                members = ",".join(rec.members)
-            else:
-                members = ",".join(rec.members[:4]) + "..."
-
             kikaku = u"""<tr>
 <td>%s</td><td>%s</td><td>%s</td><td>%s</td>
 <td>%s</td><td>%s</td><td>%d</td>
-</tr>
-<tr><td colspan="7">リーダー:%s | メンバー:%s</td></tr>""" % \
+</tr>""" % \
             (no, rec.title, rec.rank, rec.kijitu(),
-            rec.shimekiribi(), rec.teiinStr(), len(rec.members),
-            ",".join(rec.leaders), members)
+            rec.shimekiribi(), rec.teiinStr(), len(rec.members))
+
+            if user:
+                if len(rec.members) == 0:
+                    members = u""
+                elif len(rec.members) < 4:
+                    members = ",".join(rec.members)
+                else:
+                    members = ",".join(rec.members[:4]) + "..."
+    
+                kikaku += u"<tr><td colspan='7'>リーダー:%s | メンバー:%s</td></tr>" % \
+                (",".join(rec.leaders), members)
+
         kikakuList.append(kikaku)
 
     if not table:
@@ -522,7 +650,9 @@ app = webapp2.WSGIApplication([
     ('/login', Login),
     ('/table', Table),
     ('/detail', Detail),
+    ('/shimekiri', Shimekiri),
     ('/kaiin', KaiinTouroku),
+    ('/sankourireki', SankouRireki),
     ('/debug', Debug),
     ('/apply', Apply),
     ('/cancel', Cancel)

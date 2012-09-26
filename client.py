@@ -60,7 +60,10 @@ def doit(op):
     f = urllib2.urlopen(request)
     printOrRaise(f, 20)
 
-mainActions = [ "", "login", "table",
+mainActions = [ "", "login", "table", "kaiin",
+"sankourireki", "sankourireki?no=no-such-key", "sankourireki?no=99999999",
+"sankourireki?no=9000", # no=9000 はある。
+"shimekiri", "shimekiri?key=no-such-key", "shimekiri?key=KEY",
 "detail", "detail?key=no-such-key", "detail?key=KEY",
 "detail?key=ahBkZXZ-eWFtYW5va2lrYWt1cg0LEgZLaWtha3UY_AUM",
 "apply", "apply?key=no-such-key", "apply?key=KEY",
@@ -128,10 +131,12 @@ def main():
             doit(op)
         sys.exit(0)
         
+    # 普通の操作一覧
     fetchAValidKey()
     for action in mainActions:
         doit(action)
     doKaiinPost()
+    # login してからもう一度
     print "\n#### LOGGED IN ####\n"
     login()
     for action in mainActions:

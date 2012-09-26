@@ -16,15 +16,31 @@ import datetime
 import logging
 import traceback
 import unicodedata
+from django.template import Context, loader
 
 def render_template_and_write_in_sjis(handler, template_filename, body):
-    from django.template import Context, loader
     # ところで、app.yaml に、テンプレートを static と書いてはいけない。
     handler.response.headers['Content-Type'] = "text/html; charset=cp932"
 
     t = loader.get_template(template_filename)
     uni = t.render(Context({'body': body}))
     # 丸付き数字は、シフトJIS では見えない。
+    handler.response.out.write(uni.encode("cp932", "replace"))
+    return
+
+def renderKaiinTemplate(handler, logout, kaiin):
+    "会員登録のフォームは、置換部分が多くて、特別。"
+    if kaiin.seibetsu == u"男":
+        male = "checked"
+        female = ""
+    else:
+        female = "checked"
+        male = ""
+
+    handler.response.headers['Content-Type'] = "text/html; charset=cp932"
+    t = loader.get_template('kaiin.tmpl')
+    uni = t.render(Context({'logout': logout, 'kaiin': kaiin, 
+        'male': male, 'female': female}))
     handler.response.out.write(uni.encode("cp932", "replace"))
     return
 
