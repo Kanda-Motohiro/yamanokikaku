@@ -2,21 +2,23 @@
 # encoding=cp932
 # parsecsv.py
 # Copyright (c) 2012, 2012 Kanda.Motohiro@gmail.com
+"""
+Parse comma separated values.
+sjis では、
+  File "parsecsv.py", line 56
+SyntaxError: 'shift_jis' codec can't decode bytes in position 5-6:
+illegal multibyte sequence
+といわれる。どうも、No が１文字になったやつとか、丸付き数字とかが悪いらしい。
+cp932 なら、動いた。
+"""
 import sys
 import re
 import datetime
 import util
 import os
-"""
-Parse comma separated values.
-sjis では、
-  File "parsecsv.py", line 56
-SyntaxError: 'shift_jis' codec can't decode bytes in position 5-6: illegal multibyte sequence
-といわれる。どうも、No が１文字になったやつとか、丸付き数字とかが悪いらしい。
-cp932 なら、動いた。
-"""
 
 debug = 0
+
 
 def parseSankouKikakuCsvFile(buf):
     """エクセルからCSV 形式にエクスポートされた、シフトJISで書かれた、
@@ -50,14 +52,15 @@ def parseSankouKikakuCsvFile(buf):
             if m:
                 thisMonth = int(m.group(1))
             continue
-        elif u" 山行名" in line and u"締切" in line: 
+        elif u" 山行名" in line and u"締切" in line:
             # ヘッダ行は読み飛ばす
             continue
 
         # dos 改行を除く
         line = line.strip()
         els = line.split(",")
-        if debug: print els
+        if debug:
+            print els
 
         # 定員は入ってないこともある
         if len(els) < 6 or els[0] == u"":
@@ -83,7 +86,7 @@ def parseSankouKikakuCsvFile(buf):
                 today=datetime.date(thisYear, thisMonth, 1))
 
         # 山行の開始と終了日
-        start, end = util.tukihi2Kikan(els[1], 
+        start, end = util.tukihi2Kikan(els[1],
                 today=datetime.date(thisYear, thisMonth, 1))
 
         if len(els) == 7 and els[6] != u"":
@@ -97,12 +100,14 @@ def parseSankouKikakuCsvFile(buf):
 
     return out, ignored
 
+
 def main():
-    "ローカル実行して、山行企画ファイルが予期されるフォーマットか確認するため。"
+    """ローカル実行して、山行企画ファイルが予期されるフォーマットか
+    確認するため。"""
     if os.name == 'posix':
         encoding = "utf-8"
     else:
-        encoding = "cp932" # on Windows
+        encoding = "cp932"  # on Windows
 
     if "--help" in sys.argv or "-h" in sys.argv or "/?" in sys.argv:
         uni = u"使い方: %s 山行企画ファイル.csv" % sys.argv[0]
@@ -116,7 +121,7 @@ def main():
     else:
         buf = open(sys.argv[1], "rb").read()
 
-    out , ignored = parseSankouKikakuCsvFile(buf)
+    out, ignored = parseSankouKikakuCsvFile(buf)
 
     if out is None:
         print ignored[0].encode(encoding)
@@ -129,7 +134,7 @@ def main():
     uni = u"####\n以下の %d 行を処理しました。\n####" % len(out)
     print uni.encode(encoding)
     for kikaku in out:
-        print "No=%d %s" % (kikaku[0], kikaku[1].encode(encoding)) 
+        print "No=%d %s" % (kikaku[0], kikaku[1].encode(encoding))
 
     uni = u"""####\n以下の %d 行は、受付られませんでした。
 内容を確認して、必要ならば修正後、このプログラムを再実行下さい。

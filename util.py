@@ -18,6 +18,7 @@ import traceback
 import unicodedata
 from django.template import Context, loader
 
+
 def render_template_and_write_in_sjis(handler, template_filename, body):
     # ところで、app.yaml に、テンプレートを static と書いてはいけない。
     handler.response.headers['Content-Type'] = "text/html; charset=cp932"
@@ -27,6 +28,7 @@ def render_template_and_write_in_sjis(handler, template_filename, body):
     # 丸付き数字は、シフトJIS では見えない。
     handler.response.out.write(uni.encode("cp932", "replace"))
     return
+
 
 def renderKaiinTemplate(handler, logout, kaiin):
     "会員登録のフォームは、置換部分が多くて、特別。"
@@ -39,7 +41,7 @@ def renderKaiinTemplate(handler, logout, kaiin):
 
     handler.response.headers['Content-Type'] = "text/html; charset=cp932"
     t = loader.get_template('kaiin.tmpl')
-    uni = t.render(Context({'logout': logout, 'kaiin': kaiin, 
+    uni = t.render(Context({'logout': logout, 'kaiin': kaiin,
         'male': male, 'female': female}))
     handler.response.out.write(uni.encode("cp932", "replace"))
     return
@@ -49,11 +51,18 @@ def renderKaiinTemplate(handler, logout, kaiin):
 # これなら、比較をしたときに、締め切りを過ぎることがないので、よい。
 shimekiriNashi = datetime.date.max
 
+
 #
 # 日本語の月日と、 datetime 型の変換
 #
 def date2Tukihi(d):
-    return u"%d月%d日" % (d.month, d.day)
+    year = datetime.date.today().year
+    if year == d.year:
+        return u"%d月%d日" % (d.month, d.day)
+    else:
+    # 今年でなければ、年も表示。
+        return u"%d年%d月%d日" % (d.year, d.month, d.day)
+
 
 def tukihi2Date(s, today=None):
     if today:
@@ -91,6 +100,7 @@ def tukihi2Date(s, today=None):
     d = datetime.date(year, month, day)
     return d
 
+
 def tukihi2Kikan(s, today=None):
     """チルダで区切られていれば、開始、終了日として、datetime.date の組を返す。
     なければ、同じ日を２つ返す。"""
@@ -102,6 +112,7 @@ def tukihi2Kikan(s, today=None):
     start = tukihi2Date(els[0], today)
     end = tukihi2Date(els[1], today)
     return start, end
+
 
 #
 # エラーメッセージのログ、応答
@@ -123,7 +134,9 @@ if __debug__:
         except UnicodeDecodeError:
             logging.debug(str(els) + unicode(args))
 else:
-    def dbgprint(*args): pass
+    def dbgprint(*_):
+        pass
+
 
 def err(handler, message):
     els = list(traceback.extract_stack()[-2][:3])
@@ -137,14 +150,17 @@ def err(handler, message):
         out.encode("cp932", "replace"))
     return
 
+
 def _test():
     import doctest
     doctest.testmod(verbose=True)
+
 
 def dbgprinttest():
     for i in (5, "hi", ["hi", "ho"], u"あ", [u"薬師岳", u"雲の平"]):
         dbgprint(i)
         logerror(i)
+
 
 def datetest():
     today = datetime.date(2012, 8, 17)

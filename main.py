@@ -10,25 +10,25 @@
 事務局による、FAX からの転載による応募
 しめきり処理。参加者名簿を印刷、リーダーにメール送信。
 """
-import os
 import datetime
-import wsgiref.handlers
 from google.appengine.ext import db
 from google.appengine.api import users
 import webapp2
-
 from util import *
+#from util import date2Tukihi,shimekiriNashi,date2Tukihi,logerror,err, \
+#render_template_and_write_in_sjis,dbgprint,renderKaiinTemplate,
+
 
 class Kikaku(db.Model):
     "山行企画"
-    no = db.IntegerProperty(required=True) # No. 243
-    title = db.StringProperty(required=True) # 薬師岳、雲の平
-    rank = db.StringProperty() # C-C-8.5
-    start = db.DateProperty(required=True) # 8/8
-    end = db.DateProperty() # 8/12
-    shimekiri = db.DateProperty(required=True) # 締切日 6/24
-    teiin = db.IntegerProperty() # 定員　１０人
-    leaders = db.StringListProperty() # リーダー　大友、三浦
+    no = db.IntegerProperty(required=True)  # No. 243
+    title = db.StringProperty(required=True)  # 薬師岳、雲の平
+    rank = db.StringProperty()  # C-C-8.5
+    start = db.DateProperty(required=True)  # 8/8
+    end = db.DateProperty()  # 8/12
+    shimekiri = db.DateProperty(required=True)  # 締切日 6/24
+    teiin = db.IntegerProperty()  # 定員　１０人
+    leaders = db.StringListProperty()  # リーダー　大友、三浦
     members = db.StringListProperty()
 
     def __cmp__(self, other):
@@ -73,6 +73,7 @@ class Kikaku(db.Model):
            (self.title, self.rank, self.kijitu(),
            self.shimekiribi(), self.teiinStr(), len(self.members))
 
+
 class Kaiin(db.Model):
     """山岳会の会員
     会員名簿は、持ちたくなかったが、リーダーに参加者の
@@ -80,28 +81,28 @@ class Kaiin(db.Model):
     OpenID が携帯電話から使えないようなので、
     携帯端末の識別番号でログインさせることになるかも。
     """
-    no = db.IntegerProperty(required=True) # 会員番号 9000
-    name = db.StringProperty(required=True) # 田部井淳子
-    openid = db.StringProperty() # user.nickname
+    no = db.IntegerProperty(required=True)  # 会員番号 9000
+    name = db.StringProperty(required=True)  # 田部井淳子
+    openid = db.StringProperty()  # user.nickname
 
-    seibetsu = db.StringProperty() # 女
-    tel = db.PhoneNumberProperty() # 046-123-4567
+    seibetsu = db.StringProperty()  # 女
+    tel = db.PhoneNumberProperty()  # 046-123-4567
     fax = db.PhoneNumberProperty()
-    mail = db.EmailProperty() # junko-tabei@gmail.com
+    mail = db.EmailProperty()  # junko-tabei@gmail.com
     address = db.PostalAddressProperty()
 
     # 緊急連絡先
     kinkyuName = db.StringProperty()
-    kinkyuKankei = db.StringProperty() # 夫
+    kinkyuKankei = db.StringProperty()  # 夫
     kinkyuAddress = db.PostalAddressProperty()
     kinkyuTel = db.PhoneNumberProperty()
 
     # 最近行った山
-    saikin0 = db.StringProperty() # 鳳凰三山　２０１２年８月
+    saikin0 = db.StringProperty()  # 鳳凰三山　２０１２年８月
     saikin1 = db.StringProperty()
     saikin2 = db.StringProperty()
 
-    kanyuuHoken = db.StringProperty() # 山岳保険、ハイキング保険
+    kanyuuHoken = db.StringProperty()  # 山岳保険、ハイキング保険
 
     # 申し込んだ山行企画
     kikakuList = db.ListProperty(db.Key)
@@ -151,39 +152,36 @@ class Kaiin(db.Model):
 
 blankKaiin = Kaiin(no=0, name=u"未登録")
 
+
 def parseDisplayName(dname):
     els = dname.split()
+    if len(els) != 2:
+        return 0, els[0]
     return int(els[0]), els[1]
+
 
 class MoushikomiRireki(db.Model):
     "申し込みの履歴。いつ、誰が、何に応募したか。"
     created = db.DateTimeProperty(auto_now_add=True)
-    applyCancel = db.StringProperty() # "apply"/"cancel"
+    applyCancel = db.StringProperty()  # "apply"/"cancel"
 
     kaiin = db.StringProperty()
 
     kikakuNo = db.IntegerProperty()
     kikakuTitle = db.StringProperty()
 
-    #kaiin = db.ReferenceProperty()
-    #kikaku = db.ReferenceProperty()
-""" XXX 参照にするには、openid2Kaiin を、class Kaiin を返すように
-なおす必要がある。さらに、apply/cancel は、管理者が他の人の代わりに
-応募する場合、class Kaiin key をもらう必要がある。"""
-
-
 # end class
-
 
 
 def openid2Kaiin(openid):
     "OpenID ニックネームをもらい、会員レコードを返す。"
-    query =  db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1", openid)
+    query = db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1", openid)
     recs = query.fetch(1)
     if recs:
         return recs[0]
     else:
         return None
+
 
 def getKikaku(handler):
     "山行企画のキーをもらって、データベースレコードを返す。"
@@ -204,6 +202,7 @@ def getKikaku(handler):
 
     return rec
 
+
 def getKaiin():
     user = users.get_current_user()
     if not user:
@@ -216,6 +215,7 @@ def getKaiin():
         return "not kaiin"
 
     return kaiin
+
 
 def getKikakuAndKaiin(handler):
     """申し込みとキャンセルで使われる、企画と会員レコードを返す。
@@ -231,6 +231,7 @@ def getKikakuAndKaiin(handler):
         return kaiin, None
 
     return kikaku, kaiin
+
 
 #
 # handlers
@@ -252,15 +253,15 @@ class Apply(webapp2.RequestHandler):
         for key in user.kikakuList:
             other = db.get(key)
             if other.start <= rec.start <= other.end or \
-               other.start <= rec.end <= other.end:
+                other.start <= rec.end <= other.end:
 
-               body = u"""既にお申し込みの、%d %s %s と、期日が重複しています。
-               %d %s %s のお申し込みはできません。""" % \
-               (other.no, other.title, other.kijitu(), 
-               rec.no, rec.title, rec.kijitu())
+                body = u"""既にお申し込みの、%d %s %s と、期日が重複しています。
+%d %s %s のお申し込みはできません。""" % \
+                (other.no, other.title, other.kijitu(),
+                rec.no, rec.title, rec.kijitu())
 
-               render_template_and_write_in_sjis(self, 'blank.tmpl', body)
-               return
+                render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+                return
 
         # 参加者一覧に、このユーザーを追加する。
         rec.members.append(name)
@@ -276,6 +277,7 @@ class Apply(webapp2.RequestHandler):
         dbgprint("%s applied for %d %s" % (name, rec.no, rec.title))
 
         self.redirect("/detail?key=%s" % rec.key())
+
 
 class Cancel(webapp2.RequestHandler):
     def get(self):
@@ -308,6 +310,7 @@ class Cancel(webapp2.RequestHandler):
 
         self.redirect("/detail?key=%s" % rec.key())
 
+
 class Detail(webapp2.RequestHandler):
     def get(self):
         " 山行企画を表示し、申し込みとキャンセルのリンクをつける。"
@@ -336,7 +339,7 @@ class Detail(webapp2.RequestHandler):
         #    moushikomi = ""
         else:
             moushikomi = u"<a href='/apply?key=%s'>申し込む</a>" % rec.key()
-        
+
         # 応募者一覧を、その山行履歴を見られるリンクで表示する。
         memberLinks = []
         for dname in rec.members:
@@ -354,6 +357,7 @@ class Detail(webapp2.RequestHandler):
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
         return
 
+
 class SankouRireki(webapp2.RequestHandler):
     def get(self):
         "指定された会員の、今までの山行履歴を表示する。"
@@ -367,7 +371,7 @@ class SankouRireki(webapp2.RequestHandler):
             err(self, "no=%s" % key)
             return
 
-        query =  db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", no)
+        query = db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", no)
         recs = query.fetch(1)
         if not recs:
             err(self, "no kaiin rec=%s" % key)
@@ -383,7 +387,7 @@ class SankouRireki(webapp2.RequestHandler):
         rireki.sort()
         text = []
         for kikaku in rireki:
-            text.append("%s %d %s" % (date2Tukihi(kikaku.start), 
+            text.append("%s %d %s" % (date2Tukihi(kikaku.start),
                 kikaku.no, kikaku.title))
 
         body = u"<h2>%s さんの山行履歴</h2>%s<br>" % \
@@ -391,6 +395,7 @@ class SankouRireki(webapp2.RequestHandler):
 
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
         return
+
 
 class Shimekiri(webapp2.RequestHandler):
     def get(self):
@@ -407,14 +412,14 @@ class Shimekiri(webapp2.RequestHandler):
         kaiinList = []
         # すべての応募者の、緊急連絡先を含む、応募者名簿を表示する。
         for dname in rec.members:
-            no, name = parseDisplayName(dname)
+            no, _ = parseDisplayName(dname)
 
-            query =  db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", no)
+            query = db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", no)
             recs = query.fetch(1)
             if not recs:
-                dbgprint("invalid dname=%s" % dname);
+                dbgprint("invalid dname=%s" % dname)
                 continue
-            k= recs[0]
+            k = recs[0]
 
             kaiinInfo = u"%d %s %s<br>" % (k.no, k.name, k.seibetsu) + \
             u"電話 %s ＦＡＸ %s<br>メール %s<br>住所 %s<br>" % \
@@ -428,6 +433,7 @@ class Shimekiri(webapp2.RequestHandler):
         body += "<br>\n".join(kaiinList)
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
         return
+
 
 def parseKaiinForm(request):
     out = dict()
@@ -444,7 +450,7 @@ def parseKaiinForm(request):
             name = request.get("name")
         except UnicodeDecodeError, e:
             return None, "%s" % (e)
-        
+
     no = request.get("no")
     if no != "":
         try:
@@ -469,6 +475,7 @@ def parseKaiinForm(request):
             out[key] = val
 
     return out, ""
+
 
 class KaiinTouroku(webapp2.RequestHandler):
     def get(self):
@@ -496,11 +503,11 @@ class KaiinTouroku(webapp2.RequestHandler):
             return
 
         # 管理者は、任意の会員情報を生成、変更できる。
-        if 0: # XXX これだと、main で、自分が誰か探せない。users.is_current_user_admin():
+        if 0:  # XXX これだと、main で、自分が誰か探せない。users.is_current_user_admin():
             openid = None
-            query =  db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", f["no"])
+            query = db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", f["no"])
         else:
-            openid=user.nickname()
+            openid = user.nickname()
 
         # 会員でない人が、openid アカウントで登録してきたらどうするか。
         # 手元には、有効な会員と氏名の一覧を持たないので、受け入れるしか無い。
@@ -508,14 +515,16 @@ class KaiinTouroku(webapp2.RequestHandler):
         # いけない
         # 自分の名前を間違えたので、入れなおし、は拒んではいけない。
 
-            query =  db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1", openid)
+            query = db.GqlQuery("SELECT * FROM Kaiin WHERE openid = :1",
+                openid)
         # if admin
         recs = query.fetch(1)
 
         # あれば、更新。なければ、作成。
         if recs:
             rec = recs[0]
-            dbgprint("changed no %d->%d name %s->%s" % (rec.no, f["no"], rec.name, f["name"]))
+            dbgprint("changed no %d->%d name %s->%s" % (rec.no, f["no"],
+                rec.name, f["name"]))
             rec.no = f["no"]
             rec.name = f["name"]
         else:
@@ -525,6 +534,7 @@ class KaiinTouroku(webapp2.RequestHandler):
         rec.updateFromDict(f)
         rec.put()
         self.redirect("/")
+
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
@@ -557,6 +567,7 @@ class MainPage(webapp2.RequestHandler):
 
 # end MainPage
 
+
 def SankouKikakuIchiran(table=False):
     """山行企画の一覧を、ユニコードの HTML で返す。
     table=True のときは、テーブルタグを使う。
@@ -568,7 +579,8 @@ def SankouKikakuIchiran(table=False):
     # だけど、デモなので、しばらくはこうする。
     start = datetime.date(2012, 6, 1)
 
-    query =  db.GqlQuery("SELECT * FROM Kikaku WHERE start >= :1 ORDER BY start ASC", start)
+    query = db.GqlQuery("SELECT * FROM Kikaku WHERE start >= :1 \
+                ORDER BY start ASC", start)
 
     user = users.get_current_user()
     kikakuList = []
@@ -597,9 +609,10 @@ def SankouKikakuIchiran(table=False):
                     members = ",".join(rec.members)
                 else:
                     members = ",".join(rec.members[:4]) + "..."
-    
-                kikaku += u"<tr><td colspan='7'>リーダー:%s | メンバー:%s</td></tr>" % \
-                (",".join(rec.leaders), members)
+
+                kikaku += u"<tr><td colspan='7'>\
+                    リーダー:%s | メンバー:%s</td></tr>" % \
+                    (",".join(rec.leaders), members)
 
         kikakuList.append(kikaku)
 
@@ -611,17 +624,20 @@ def SankouKikakuIchiran(table=False):
 <th>締め切り</th><th>定員</th><th>現在</th></tr>""" + \
         "\n".join(kikakuList) + "</table>"
 
+
 class Table(webapp2.RequestHandler):
     def get(self):
         body = SankouKikakuIchiran(table=True)
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
         return
 
+
 class Login(webapp2.RequestHandler):
     def get(self):
         body = "<p><a href='%s'>google</a></p>" % \
-        users.create_login_url(federated_identity='www.google.com/accounts/o8/id') + \
-        "<p><a href='%s'>mixi</a></p>" % \
+        users.create_login_url(
+            federated_identity='www.google.com/accounts/o8/id') + \
+            "<p><a href='%s'>mixi</a></p>" % \
         users.create_login_url(federated_identity='mixi.jp') + \
         "<p><a href='%s'>biglobe</a></p>" % \
         users.create_login_url(federated_identity='openid.biglobe.ne.jp') + \
@@ -630,13 +646,14 @@ class Login(webapp2.RequestHandler):
 
         render_template_and_write_in_sjis(self, 'login.tmpl', body)
 
+
 class Debug(webapp2.RequestHandler):
     def get(self):
         "デバッグ用に、最初の企画レコードのキーを返す。"
         if self.request.environ.get("SERVER_NAME") != "localhost":
             self.error(404)
 
-        recs =  db.GqlQuery("SELECT * FROM Kikaku").fetch(1)
+        recs = db.GqlQuery("SELECT * FROM Kikaku").fetch(1)
         if len(recs) == 0:
             key = "None"
         else:
