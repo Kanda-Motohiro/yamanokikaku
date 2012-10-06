@@ -4,7 +4,8 @@ yamanokikaku.kaiin.tmpl Copyright (c) 2012 Kanda.Motohiro@gmail.com
 coding=utf-8
 {% endcomment %}
 {% block content %}
-会員番号、氏名などを入力して、「登録」ボタンを押して下さい。<a href='{{logout}}'>ログアウト</a>。<br>
+会員番号、氏名などを入力して、「登録」ボタンを押して下さい。
+<a href='{{logout}}'>ログアウト</a>。&nbsp; {{unsubscribe}}<br>
 <p><form action='/kaiin' method='post' enctype='multipart/form-data'></p>
 <p>会員番号 <input type='text' name='no' size='8' value={{kaiin.no}}></p>
 <p>氏名 <input type='text' name='name' size='20' value={{kaiin.name}}></p>

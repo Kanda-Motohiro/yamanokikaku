@@ -536,6 +536,17 @@ class KaiinTouroku(webapp2.RequestHandler):
         self.redirect("/")
 
 
+class KaiinSakujo(webapp2.RequestHandler):
+    def get(self):
+        "自分の登録情報を忘れさせる。"
+        kaiin = getKaiin()
+        if isinstance(kaiin, str):
+            err(self, "cannot delete kaiin " + kaiin)
+            return
+        db.delete(kaiin)
+        self.redirect("/")
+
+
 class MainPage(webapp2.RequestHandler):
     def get(self):
         user = users.get_current_user()
@@ -669,6 +680,7 @@ app = webapp2.WSGIApplication([
     ('/detail', Detail),
     ('/shimekiri', Shimekiri),
     ('/kaiin', KaiinTouroku),
+    ('/unsubscribe', KaiinSakujo),
     ('/sankourireki', SankouRireki),
     ('/debug', Debug),
     ('/apply', Apply),

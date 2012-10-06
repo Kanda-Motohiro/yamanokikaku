@@ -39,9 +39,17 @@ def renderKaiinTemplate(handler, logout, kaiin):
         female = "checked"
         male = ""
 
+    # これは、既に登録している人にだけ、見せる。
+    if kaiin.name == u"未登録":
+        unsubscribe = ""
+    else:
+        unsubscribe = """<a href='/unsubscribe'>
+            このサイトへの登録を削除する</a>。"""
+        
     handler.response.headers['Content-Type'] = "text/html; charset=cp932"
     t = loader.get_template('kaiin.tmpl')
-    uni = t.render(Context({'logout': logout, 'kaiin': kaiin,
+    uni = t.render(Context({'logout': logout, 'unsubscribe': unsubscribe,
+        'kaiin': kaiin,
         'male': male, 'female': female}))
     handler.response.out.write(uni.encode("cp932", "replace"))
     return
