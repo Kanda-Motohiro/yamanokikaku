@@ -45,7 +45,7 @@ def renderKaiinTemplate(handler, logout, kaiin):
     else:
         unsubscribe = """<a href='/unsubscribe'>
             このサイトへの登録を削除する</a>。"""
-        
+
     handler.response.headers['Content-Type'] = "text/html; charset=cp932"
     t = loader.get_template('kaiin.tmpl')
     uni = t.render(Context({'logout': logout, 'unsubscribe': unsubscribe,

@@ -2,10 +2,33 @@
 {% comment %}
 yamanokikaku.login.tmpl Copyright (c) 2012 Kanda.Motohiro@gmail.com
 coding=utf-8
+Facebook login code from https://github.com/pythonforfacebook/facebook-sdk
 {% endcomment %}
 {% block content %}
+<div id="fb-root"></div>
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({appId: '262276473906025', status: true, cookie: true,
+                 xfbml: true});
+        FB.Event.subscribe('auth.login', function(response) {
+          window.location.reload();
+        });
+      };
+      (function() {
+        var e = document.createElement('script');
+        e.type = 'text/javascript';
+        e.src = document.location.protocol + '//connect.facebook.net/en_US/all.js';
+        e.async = true;
+        document.getElementById('fb-root').appendChild(e);
+      }());
+    </script>
+
 お持ちの ID でログインください。<br>
 {{ body }}
+<fb:login-button autologoutlink="true" scope="publish_stream"></fb:login-button>
+<br>
+<br>
+
 このサイトは、それ自身の会員登録機能を持ちません。あなたが、前にあげた
 サイトに会員登録されていれば、そのアカウントがそのまま使えます。<br>
 これを、OpenID オープンアイディー、による会員情報の共有といいます。

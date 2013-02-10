@@ -5,7 +5,7 @@
 import webapp2
 from google.appengine.ext import db
 
-from main import Kikaku, Kaiin
+from model import Kikaku, Kaiin
 import parsecsv
 from util import *
 
