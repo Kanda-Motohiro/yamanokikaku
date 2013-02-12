@@ -144,7 +144,7 @@ blankKaiin = Kaiin(no=0, name=u"未登録")
 
 
 def parseDisplayName(dname):
-    els = dname.split()
+    els = dname.split(None, 1)
     if len(els) != 2:
         return 0, els[0]
     return int(els[0]), els[1]

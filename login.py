@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding=utf-8
 # http://yamanokikaku.appspot.com/login.py
-# Copyright (c) 2008, 2012 Kanda.Motohiro@gmail.com
+# Copyright (c) 2008, 2013 Kanda.Motohiro@gmail.com
 # Licensed under the Apache License, Version 2.0
 
 from google.appengine.ext import db
@@ -11,6 +11,7 @@ import facebook
 from util import *
 from model import Kaiin, blankKaiin
 import main
+import facebookexample
 
 
 def openid2Kaiin(openid):
@@ -28,47 +29,58 @@ def getKikaku(handler):
     key = handler.request.get('key')
     if not key:
         logerror("no key")
-        return "no key"
+        return None
 
     try:
         rec = db.get(key)
     except db.BadKeyError:
         logerror("bad key", key)
-        return "bad key"
+        return None
 
     if rec is None:
         logerror("no record", key)
-        return "no record"
+        return None
 
     return rec
 
 
-def getKaiin():
+def getCurrentUserId(handler):
+    "グーグルアカウント、OpenID, facebook の id を文字列で返す。"
     user = users.get_current_user()
-    if not user:
-        logerror("no user")
-        return "no user"
+    if user:
+        return user.nickname()
 
-    kaiin = openid2Kaiin(user.nickname())
+    # base handler で定義される、プロパティ
+    user = handler.current_user
+    if user is None or "id" not in user:
+        return None
+
+    return user["id"]
+
+def getKaiin(handler):
+    uid = getCurrentUserId(handler)
+    if uid is None:
+        logerror("no user")
+        return None
+
+    kaiin = openid2Kaiin(uid)
     if not kaiin:
         logerror("not kaiin")
-        return "not kaiin"
+        return None
 
     return kaiin
 
 
 def getKikakuAndKaiin(handler):
     """申し込みとキャンセルで使われる、企画と会員レコードを返す。
-    エラーがいろいろあるので、最初の戻り値に文字列で返す。
-    基本的に、これらは、バグ。
     """
     kikaku = getKikaku(handler)
-    if isinstance(kikaku, str):
-        return kikaku, None
+    if kikaku is None:
+        return None, None
 
-    kaiin = getKaiin()
-    if isinstance(kaiin, str):
-        return kaiin, None
+    kaiin = getKaiin(handler)
+    if kaiin is None:
+        return None, None
 
     return kikaku, kaiin
 
@@ -118,17 +130,17 @@ def parseKaiinForm(request):
     return out, ""
 
 
-class KaiinTouroku(webapp2.RequestHandler):
+class KaiinTouroku(facebookexample.BaseHandler):
     def get(self):
         """山岳会の会員番号、氏名と、openid の対応をもらう。
         緊急連絡先なども、入れてもらう。
         """
-        kaiin = getKaiin()
+        kaiin = getKaiin(self)
         # 新規登録か、更新か。
-        if isinstance(kaiin, str):
+        if kaiin is None:
             kaiin = blankKaiin
 
-        body = users.create_logout_url("/")
+        body = "/logout"
 
         renderKaiinTemplate(self, body, kaiin)
 
@@ -138,8 +150,8 @@ class KaiinTouroku(webapp2.RequestHandler):
             render_template_and_write_in_sjis(self, 'blank.tmpl', error)
             return
 
-        user = users.get_current_user()
-        if not user:
+        uid = getCurrentUserId(self)
+        if uid is None:
             err(self, "no user at post")
             return
 
@@ -148,7 +160,7 @@ class KaiinTouroku(webapp2.RequestHandler):
             openid = None
             query = db.GqlQuery("SELECT * FROM Kaiin WHERE no = :1", f["no"])
         else:
-            openid = user.nickname()
+            openid = uid
 
         # 会員でない人が、openid アカウントで登録してきたらどうするか。
         # 手元には、有効な会員と氏名の一覧を持たないので、受け入れるしか無い。
@@ -177,26 +189,27 @@ class KaiinTouroku(webapp2.RequestHandler):
         self.redirect("/")
 
 
-class KaiinSakujo(webapp2.RequestHandler):
+class KaiinSakujo(facebookexample.BaseHandler):
     def get(self):
         "自分の登録情報を忘れさせる。"
-        kaiin = getKaiin()
-        if isinstance(kaiin, str):
-            err(self, "cannot delete kaiin " + kaiin)
+        kaiin = getKaiin(self)
+        if kaiin is None:
+            err(self, "cannot delete kaiin")
             return
         db.delete(kaiin)
         self.redirect("/")
 
 
-class MainPage(webapp2.RequestHandler):
+class MainPage(facebookexample.BaseHandler):
     def get(self):
-        user = users.get_current_user()
-        if not user:
+        kaiin = None
+        uid = getCurrentUserId(self)
+        if uid is None:
             body = u"""申し込みなどをするには、
             <a href='/login'>ログイン</a>して、会員登録をして下さい。"""
         else:
-            kaiin = openid2Kaiin(user.nickname())
-            if not kaiin:
+            kaiin = openid2Kaiin(uid)
+            if kaiin is None:
                 # ログインしたけど、会員データベースにないときは、登録画面へ
                 self.redirect("/kaiin")
                 return
@@ -205,14 +218,13 @@ class MainPage(webapp2.RequestHandler):
 番号をクリックして下さい。<br>
 <a href='/kaiin'>会員情報</a>&nbsp;
 <a href='/sankourireki?no=%d'>最近行った山</a>&nbsp;
-<a href='%s'>ログアウト</a>。""" % \
-                (kaiin.displayName(), kaiin.no,
-                    users.create_logout_url(self.request.uri))
+<a href='/logout'>ログアウト</a>。""" % \
+                (kaiin.displayName(), kaiin.no)
 
         # 山行企画一覧を表示する。会員には、申し込みもできる詳細ページの
         # リンクを示す。
 
-        body += main.SankouKikakuIchiran()
+        body += main.SankouKikakuIchiran(kaiin)
 
         render_template_and_write_in_sjis(self, 'main.tmpl', body)
         return
@@ -234,4 +246,18 @@ class Login(webapp2.RequestHandler):
 
         render_template_and_write_in_sjis(self, 'login.tmpl', body)
 
+
+class Logout(webapp2.RequestHandler):
+    def get(self):
+        user = users.get_current_user()
+        if user is None:
+            self.redirect("/fblogout")
+            return
+        body = users.create_logout_url("/")
+        render_template_and_write_in_sjis(self, 'logout.tmpl', body)
+
+class FbLogout(webapp2.RequestHandler):
+    def get(self):
+        render_template_and_write_in_sjis(self, 'fblogout.tmpl',
+            facebookexample.FACEBOOK_APP_ID)
 # eof

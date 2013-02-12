@@ -44,6 +44,8 @@ import base64
 import logging
 import socket
 
+from util import logerror
+
 # Find a JSON parser
 try:
     import simplejson as json
@@ -455,7 +457,8 @@ def get_user_from_cookie(cookies, app_id, app_secret):
     try:
         result = get_access_token_from_code(parsed_request["code"], "",
                                             app_id, app_secret)
-    except GraphAPIError:
+    except GraphAPIError, e:
+        logerror(e)
         return None
     result["uid"] = parsed_request["user_id"]
     return result

@@ -11,7 +11,7 @@ Facebook login code from https://github.com/pythonforfacebook/facebook-sdk
         FB.init({appId: '262276473906025', status: true, cookie: true,
                  xfbml: true});
         FB.Event.subscribe('auth.login', function(response) {
-          window.location.reload();
+          window.location = "/";
         });
       };
       (function() {

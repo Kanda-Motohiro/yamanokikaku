@@ -19,17 +19,18 @@ from util import *
 #render_template_and_write_in_sjis,dbgprint,renderKaiinTemplate,
 import login
 import model
+import facebookexample
 
 
 #
 # handlers
 #
-class Apply(webapp2.RequestHandler):
+class Apply(facebookexample.BaseHandler):
     def get(self):
         "山行企画に申し込む。企画のキーが渡る。"
         rec, user = login.getKikakuAndKaiin(self)
-        if isinstance(rec, str):
-            err(self, "invalid user/key " + rec)
+        if rec is None:
+            err(self, "invalid user/key")
             return
 
         name = user.displayName()
@@ -67,12 +68,12 @@ class Apply(webapp2.RequestHandler):
         self.redirect("/detail?key=%s" % rec.key())
 
 
-class Cancel(webapp2.RequestHandler):
+class Cancel(facebookexample.BaseHandler):
     def get(self):
         "山行企画の申し込みをキャンセルする。"
         rec, user = login.getKikakuAndKaiin(self)
-        if isinstance(rec, str):
-            err(self, "invalid user/key " + rec)
+        if rec is None:
+            err(self, "invalid user/key")
             return
 
         name = user.displayName()
@@ -99,12 +100,12 @@ class Cancel(webapp2.RequestHandler):
         self.redirect("/detail?key=%s" % rec.key())
 
 
-class Detail(webapp2.RequestHandler):
+class Detail(facebookexample.BaseHandler):
     def get(self):
         " 山行企画を表示し、申し込みとキャンセルのリンクをつける。"
         rec, user = login.getKikakuAndKaiin(self)
-        if isinstance(rec, str):
-            err(self, "invalid user/key " + rec)
+        if rec is None:
+            err(self, "invalid user/key")
             return
 
         moushikomi = ""
@@ -185,13 +186,13 @@ class SankouRireki(webapp2.RequestHandler):
         return
 
 
-class Shimekiri(webapp2.RequestHandler):
+class Shimekiri(facebookexample.BaseHandler):
     def get(self):
         """key で指定された山行企画の締切日が来たので、応募者のリストを
         表示する。"""
         rec = login.getKikaku(self)
-        if isinstance(rec, str):
-            err(self, "invalid key " + rec)
+        if rec is None:
+            err(self, "invalid key")
             return
 
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
@@ -223,7 +224,7 @@ class Shimekiri(webapp2.RequestHandler):
         return
 
 
-def SankouKikakuIchiran(table=False):
+def SankouKikakuIchiran(user, table=False):
     """山行企画の一覧を、ユニコードの HTML で返す。
     table=True のときは、テーブルタグを使う。
     """
@@ -237,7 +238,6 @@ def SankouKikakuIchiran(table=False):
     query = db.GqlQuery("SELECT * FROM Kikaku WHERE start >= :1 \
                 ORDER BY start ASC", start)
 
-    user = users.get_current_user()
     kikakuList = []
     for rec in query:
         if user:
@@ -280,9 +280,10 @@ def SankouKikakuIchiran(table=False):
         "\n".join(kikakuList) + "</table>"
 
 
-class Table(webapp2.RequestHandler):
+class Table(facebookexample.BaseHandler):
     def get(self):
-        body = SankouKikakuIchiran(table=True)
+        kaiin = login.getKaiin(self)
+        body = SankouKikakuIchiran(kaiin, table=True)
         render_template_and_write_in_sjis(self, 'blank.tmpl', body)
         return
 
@@ -305,6 +306,9 @@ class Debug(webapp2.RequestHandler):
 app = webapp2.WSGIApplication([
     ('/', login.MainPage),
     ('/login', login.Login),
+    ('/logout', login.Logout),
+    ('/fblogout', login.FbLogout),
+    ('/postfblogout', facebookexample.LogoutHandler),
     ('/table', Table),
     ('/detail', Detail),
     ('/shimekiri', Shimekiri),
@@ -314,6 +318,8 @@ app = webapp2.WSGIApplication([
     ('/debug', Debug),
     ('/apply', Apply),
     ('/cancel', Cancel)
-    ], debug=True)
+    ],
+    config=facebookexample.config,
+    debug=True)
 #        err(self, "not implemented")
 # eof
