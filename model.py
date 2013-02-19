@@ -5,7 +5,7 @@
 # Licensed under the Apache License, Version 2.0
 
 from google.appengine.ext import db
-from util import date2Tukihi, shimekiriNashi
+from util import date2Tukihi, shimekiriNashi, dbgprint
 
 
 class Kikaku(db.Model):
@@ -159,5 +159,28 @@ class MoushikomiRireki(db.Model):
 
     kikakuNo = db.IntegerProperty()
     kikakuTitle = db.StringProperty()
+
+
+class Config(db.Model):
+    """facebook app_secret のように、ソースにハードコードして
+    さらすことのできないものを置く。"""
+    name = db.StringProperty()
+    value = db.StringProperty()
+
+configs = dict(facebook_app_secret="fb", twitter_consumer_secret="tw")
+
+
+def loadConfig():
+    for name in ("facebook_app_secret", "twitter_consumer_secret"):
+        uname = unicode(name)
+        recs = db.GqlQuery("SELECT * FROM Config WHERE name = :1", uname) \
+            .fetch(1)
+        if recs:
+            value = recs[0].value
+            configs[name] = value.encode('utf-8')
+        else:
+            dbgprint("%s not found" % name)
+
+loadConfig()
 
 # eof

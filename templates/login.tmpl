@@ -1,51 +1,22 @@
 {% extends 'base.tmpl' %}
 {% comment %}
-yamanokikaku.login.tmpl Copyright (c) 2012 Kanda.Motohiro@gmail.com
+yamanokikaku.login.tmpl Copyright (c) 2012, 2013 Kanda.Motohiro@gmail.com
 coding=utf-8
-Facebook login code from https://github.com/pythonforfacebook/facebook-sdk
 {% endcomment %}
 {% block content %}
-<div id="fb-root"></div>
-    <script>
-      window.fbAsyncInit = function() {
-        FB.init({appId: '262276473906025', status: true, cookie: true,
-                 xfbml: true});
-        FB.Event.subscribe('auth.login', function(response) {
-          window.location = "/";
-        });
-      };
-      (function() {
-        var e = document.createElement('script');
-        e.type = 'text/javascript';
-        e.src = document.location.protocol + '//connect.facebook.net/en_US/all.js';
-        e.async = true;
-        document.getElementById('fb-root').appendChild(e);
-      }());
-    </script>
-
 お持ちの ID でログインください。<br>
 {{ body }}
-<fb:login-button autologoutlink="true" scope="publish_stream"></fb:login-button>
-<br>
-<br>
-
 このサイトは、それ自身の会員登録機能を持ちません。あなたが、前にあげた
 サイトに会員登録されていれば、そのアカウントがそのまま使えます。<br>
-これを、OpenID オープンアイディー、による会員情報の共有といいます。
+これを、OpenID オープンアイディー、あるいは、OAuth
+オーオースによる会員情報の共有といいます。
 <a href="https://www.dominos.jp/openid/index.html">ドミノピザさんの説明</a>がわかりやすくていいと思います。<br>
 <br>
 他に、ご使用の OpenID プロバイダーがありましたら、ご連絡下さい。<br>
-<br>
-<a href="http://www.facebook.com">フェースブック</a>のアカウントによるログインもサポートしました。<br>
 <br>
 ご注意。携帯電話からは、うまくログインできないことがあります。
 おそれいりますが、そのときは、パソコン、スマートフォンなどから
 ご利用下さい。<br>
 
-<!--<br>申し込みをしたときの、参加者の表示が、https://id.mixi.jp/1234567 の
-ようになるのは、
-あなたの OpenID と、会員番号、氏名の対応がわからないためです。
-<a href="/kaiin">会員番号を入力</a>していただくと、わかりやすい表示になります。<br>-->
-<br>
 <a href="/">ホーム</a>
 {% endblock %}

@@ -1,11 +1,42 @@
 <html><head>
 <meta http-equiv="Content-Type" content="text/html; charset='UTF-8'" >
-<title>Google App Engine with OpenID 携帯サイト開発者向け情報</title>
+<title>Google App Engine with OpenID/OAuth 携帯サイト開発者向け情報</title>
 </head><body>
-<h1>Google App Engine with OpenID 携帯サイト開発者向け情報</h1>
+<h1>Google App Engine with OpenID/OAuth 携帯サイト開発者向け情報</h1>
 どちらかというと、私の覚え書きです。
 OpenID のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
 移るトラブルも記録しておきます。
+
+<h2>sign in with facebook サポート</h2>
+facebook-sdk/examples/oauth/facebookoauth.py をコピーして、なおして使ったら、
+あっさり動いた。Javascript SDK を使うバージョンも作ったが、他の OpenID, Twitter
+ ログオンと画面が違ってくるので、やめた。<br>
+<h3>AttributeError: ResponseHeaders instance has no attribute '_headers'</h3>
+http://stackoverflow.com/questions/7956842/can-i-use-gae-python-2-7-django-utils-translation<br>
+あと、フィーチャーフォンでログインしようとしたら、証明書が不正だと言って、
+進めなかった。<br>
+
+<h3>API Error Code: 191</h3>
+API Error Description: The specified URL is not owned by the application<br>
+Error Message: Invalid redirect_uri: 指定されたURLは、アプリケーションの設定で許可されていません。<br>
+localhost の開発サーバーでやるときと、アップロードした時で、アプリケーションの
+設定ページで、「Facebookでログインするウェブサイト」を毎回、変えないといけないんだ。
+
+<h2>sign in with twitter サポート</h2>
+２０１３年２月。<br>
+まず、自分でクッキーを使ってセッションを記憶する<br>
+http://webapp-improved.appspot.com/api/webapp2_extras/sessions.html<br>
+tweepy を使った。<br>
+http://www.sakimura.org/2011/05/1087/ - 
+非技術者のためのOAuth認証(?)とOpenIDの違い入門<br>
+によると、oauth は認証プロトコルではない、とのことですが。<br>
+
+<h3>TweepError HTTPError()</h3>
+get_authorization_url で、エラーになる。
+ワイアシャークでパケットを取ったら、ていねいなエラーメッセージが入っていた。
+<pre>Desktop applications only support the oauth_callback value 'oob'</pre>
+http://d.hatena.ne.jp/speg03/20091019/1255957580 - TwitterのOAuthでCallbackさせるときの注意点<br>
+を読んで、自分のアプリケーションの設定ページで、Callback URL: を入れたら、なおった。<br>
 
 <h2>app engine python 2.7</h2>
 https://developers.google.com/appengine/docs/python/python27/migrate27<br>

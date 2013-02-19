@@ -30,7 +30,7 @@ def printOrRaise(page, lines):
     for i in range(lines):
         line = page.readline()
         # 空白行はとばす
-        m = re.search(r"^\s*$", line)
+        m = re.search("^\s*$", line)
         if m: continue
         if "meta http-equiv" in line: continue
         # 落ちていたら、こちらも中止
@@ -44,7 +44,7 @@ def fetchAValidKey():
     global validKey
 
     page = urllib.urlopen(host + "debug")
-    buf = page.read()
+    buf= page.read()
     print buf
 
     if (not buf.startswith("key=")) or "None" in buf:

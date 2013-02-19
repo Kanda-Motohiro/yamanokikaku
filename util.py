@@ -17,6 +17,8 @@ import logging
 import traceback
 import unicodedata
 from django.template import Context, loader
+import webapp2
+from webapp2_extras import sessions
 
 
 def render_template_and_write_in_sjis(handler, template_filename, body):
@@ -53,6 +55,27 @@ def renderKaiinTemplate(handler, logout, kaiin):
         'male': male, 'female': female}))
     handler.response.out.write(uni.encode("cp932", "replace"))
     return
+
+
+# oauth サポートのため、クッキーでセッション管理をする。以下のサンプル参照。
+# http://webapp-improved.appspot.com/api/webapp2_extras/sessions.html
+class BaseHandler(webapp2.RequestHandler):
+    def dispatch(self):
+        # Get a session store for this request.
+        self.session_store = sessions.get_store(request=self.request)
+
+        try:
+            # Dispatch the request.
+            webapp2.RequestHandler.dispatch(self)
+        finally:
+            # Save all sessions.
+            self.session_store.save_sessions(self.response)
+
+    @webapp2.cached_property
+    def session(self):
+        # Returns a session using the default cookie key.
+        return self.session_store.get_session()
+
 
 # 締め切りなし。当日参加が可能。datetime には、None は入らないので、
 # 西暦 9999/12/31 、無効な日付として使う。

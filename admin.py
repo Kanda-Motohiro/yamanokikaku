@@ -5,7 +5,7 @@
 import webapp2
 from google.appengine.ext import db
 
-from model import Kikaku, Kaiin
+from model import Kikaku, Kaiin, Config, loadConfig
 import parsecsv
 from util import *
 
@@ -157,9 +157,30 @@ class DeleteAll(webapp2.RequestHandler):
 
         self.response.out.write('<html><body>delete done</body></html>')
 
+class InitConfig(webapp2.RequestHandler):
+    def get(self):
+        body = u"""Config
+<p><form action='/admin/config' method='post' enctype="multipart/form-data"></p>
+        <p>name:<input type='text' name='name' size='40'></p>
+        <p>value:<input type='text' name='value' size='40'></p>
+        <p><input type='submit' value='送信'></p>
+        </form></p>"""
+        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+
+    def post(self):
+        name = self.request.get("name")
+        value = self.request.get("value")
+        if name != "" and value != "":
+            rec = Config(name=name, value=value)
+            rec.put()
+            dbgprint(name)
+        loadConfig()
+        self.redirect("/")
+
 app = webapp2.WSGIApplication([
     ('/admin/deleteall', DeleteAll),
     ('/admin/initload', InitLoad),
+    ('/admin/config', InitConfig),
 
     ('/admin/kaiin', KaiinTouroku),
     ('/admin/dumpkaiin', DumpKaiin),
