@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding=utf-8
 #
 # Copyright 2010 Facebook
 #
@@ -13,6 +14,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+
+# Copyright (c) 2013 Kanda.Motohiro@gmail.com
 
 """A barebones AppEngine application that uses Facebook for login.
 
@@ -54,8 +57,11 @@ class FbLogin(BaseHandler):
     def get(self):
         code = self.request.get("code")
         if not code:
-            err(self, "code not found")
+            # 4.1.2.1 error というのが、フォームに入ってくる。
+            err(self, "code not found. " + self.request.get("error"))
             return
+        # なんで、urlopen するのに、redirect_uri が必要か、と思ったが、
+        # そういう、oauth 2.0 仕様なんだそうだ。4.1 (E)
         args = dict(client_id=FACEBOOK_APP_ID,
                     redirect_uri=self.request.path_url,
                     client_secret=model.configs["facebook_app_secret"],
@@ -65,11 +71,11 @@ class FbLogin(BaseHandler):
             "https://graph.facebook.com/oauth/access_token?" +
             urllib.urlencode(args)).read())
         except Exception, e:
-            err(self, "access_token " + e)
+            err(self, "access_token " + str(e))
             return
-            
+        # json で返ってくるはず。
         if "access_token" not in response:
-            err(self, "access_token not found")
+            err(self, "access_token not found " + str(response))
             return
         access_token = response["access_token"][-1]
 

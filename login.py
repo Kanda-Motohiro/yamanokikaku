@@ -93,11 +93,16 @@ consumer_key = "63g31tILRVbmELMAbuX2Bg"
 
 class Login(BaseHandler):
     def get(self):
+        if self.request.environ.get("SERVER_NAME") == "localhost":
+            proto = "http"
+        else:
+            proto = "https"
+
         # twitter ログインの準備
         # thanks to http://pythonhosted.org/tweepy/html/auth_tutorial.html
         consumer_secret = model.configs["twitter_consumer_secret"]
-        callback_url = "http://%s/twlogin" % \
-            self.request.environ.get("HTTP_HOST")
+        callback_url = "%s://%s/twlogin" % \
+            (proto, self.request.environ.get("HTTP_HOST"))
         auth = tweepy.OAuthHandler(consumer_key, consumer_secret, callback_url)
         try:
             tw_redirect_url = auth.get_authorization_url()
@@ -126,8 +131,8 @@ class Login(BaseHandler):
         # facebook login
         # thanks to facebook-sdk/examples/oauth/facebookoauth.py
         args = dict(client_id=facebookoauth.FACEBOOK_APP_ID,
-                    redirect_uri="http://%s/fblogin" % \
-                        self.request.environ.get("HTTP_HOST"))
+                    redirect_uri="%s://%s/fblogin" % \
+                        (proto, self.request.environ.get("HTTP_HOST")))
         facebok_login_url = "https://graph.facebook.com/oauth/authorize?" + \
             urllib.urlencode(args)
         body += "<p><a href='%s'>facebook</a></p>" % facebok_login_url
