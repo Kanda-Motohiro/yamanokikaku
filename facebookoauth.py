@@ -55,6 +55,16 @@ FACEBOOK_APP_ID = "262276473906025"
 
 class FbLogin(BaseHandler):
     def get(self):
+        # http://developers.facebook.com/docs/howtos/login/server-side-login/
+        # に、こうせよと書いてあるけど。
+        state = self.session.get("fb_state")
+        state2 = self.request.get("state")
+        if state and state2 and state == state2:
+            pass
+        else:
+            err(self, "state does not match. CSRF?. %s:%s " % (state, state2))
+            return
+
         code = self.request.get("code")
         if not code:
             # 4.1.2.1 error というのが、フォームに入ってくる。
@@ -94,6 +104,8 @@ class FbLogin(BaseHandler):
                    expires=time.time() + 30 * 86400)
 
         self.session["uid"] = name
+        # これはもういらない。
+        del self.session["fb_state"]
         dbgprint("name=%s id=%s logged in with facebook" % (name, profile["id"]))
         self.redirect("/")
 

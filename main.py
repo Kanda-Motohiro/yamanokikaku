@@ -5,7 +5,8 @@
 # Licensed under the Apache License, Version 2.0
 
 """todo
-oauth/facebookoauth.py を読む
+facebook/twitter id でもつけないと、同じ人が別のアカウントで入っていると困る
+リファーラ？
 
 確認のメールを発信。
 バックアップ。
@@ -129,9 +130,9 @@ class Detail(BaseHandler):
         # 締切日をすぎていれば、申し込みは表示しない。
         #elif rec.shimekiri < datetime.date.today():
         # デモなので、この日付とする。
-        elif rec.shimekiri < datetime.date(2012, 9, 1):
+        elif rec.shimekiri < datetime.date(2012, 8, 10):
             moushikomi = u"""申し込みは締めきりました。<br>
-デモのため、現在日付を、９月１日にしています。これより前の締切日の企画は、
+デモのため、現在日付を、８月１０日にしています。これより前の締切日の企画は、
 申し込みをできなくしてあります。"""
 
         # 定員を超えていれば、おなじく。

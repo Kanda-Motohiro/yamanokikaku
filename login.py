@@ -7,6 +7,9 @@
 from google.appengine.ext import db
 from google.appengine.api import users
 import urllib
+import hashlib
+import random
+import hmac
 import tweepy
 from util import *
 import model
@@ -99,7 +102,7 @@ class Login(BaseHandler):
             proto = "https"
 
         # twitter ログインの準備
-        # thanks to http://pythonhosted.org/tweepy/html/auth_tutorial.html
+        # http://pythonhosted.org/tweepy/html/auth_tutorial.html 参照。
         consumer_secret = model.configs["twitter_consumer_secret"]
         callback_url = "%s://%s/twlogin" % \
             (proto, self.request.environ.get("HTTP_HOST"))
@@ -129,10 +132,17 @@ class Login(BaseHandler):
             body += "<p><a href='%s'>twitter</a></p>" % tw_redirect_url
 
         # facebook login
-        # thanks to facebook-sdk/examples/oauth/facebookoauth.py
+        # facebook-sdk/examples/oauth/facebookoauth.py 参照。
+        # state をセッションに入れて比較するのは、ここ。本当に効果あるの？
+        # http://developers.facebook.com/docs/howtos/login/server-side-login/
+        hash = hmac.new(str(random.random()), digestmod=hashlib.sha1)
+        self.session["fb_state"] = hash.hexdigest()
+        dbgprint(self.session["fb_state"])
         args = dict(client_id=facebookoauth.FACEBOOK_APP_ID,
+                    state=hash.hexdigest(),
                     redirect_uri="%s://%s/fblogin" % \
                         (proto, self.request.environ.get("HTTP_HOST")))
+
         facebok_login_url = "https://graph.facebook.com/oauth/authorize?" + \
             urllib.urlencode(args)
         body += "<p><a href='%s'>facebook</a></p>" % facebok_login_url
@@ -145,12 +155,13 @@ class TwLogin(BaseHandler):
         "twitter でログインした後、リダイレクトされてくるコールバック"
         token = self.session.get("tw_token")
         verifier = self.request.get("oauth_verifier")
+        error = self.request.get("denied")
 
         if token and verifier:
             pass
         else:
-            msg = "token=%s verifier=%s" % \
-                (token, verifier)
+            msg = "token=%s verifier=%s error=%s" % \
+                (token, verifier, error)
             if not verifier:
                 # アプリケーション認証を断られました
                 logerror(msg)
