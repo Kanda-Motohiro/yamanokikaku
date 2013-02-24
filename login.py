@@ -47,12 +47,19 @@ def getKikaku(handler):
 
 
 def getCurrentUserId(handler):
-    "グーグルアカウント、OpenID, facebook の id を文字列で返す。"
+    """グーグルアカウント、OpenID, facebook, twitter の id を
+    文字列で返す。ユニークになるように、発行元もつける。
+    """
     user = users.get_current_user()
     if user:
+        # openid の場合、nickname に、https://id.mixi.jp/ などが
+        # ついてくるので、federated_provider を使う必要なく、
+        # プロバイダーごとにユニークになる。
         return user.nickname()
 
     # twitter/facebook
+    # セッションに入れるときに、@facebook などの文字をつけて、
+    # ユニークにしている。
     uid = handler.session.get("uid")
     if uid:
         return uid
@@ -182,10 +189,11 @@ class TwLogin(BaseHandler):
         # これはもういらない
         del self.session["tw_token"]
 
-        # ユニークな数字のID みたいなものは、ないのかな。
-        name = auth.get_username()
-        dbgprint(name)
-        self.session["uid"] = name
+        api = tweepy.API(auth)
+        me = api.me()
+        # これで、 id の文字列がとれるらしい。
+        nameid = me.screen_name + "." + me.id_str
+        self.session["uid"] = nameid + "@twitter"
 
         self.redirect("/")
 

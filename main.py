@@ -5,9 +5,6 @@
 # Licensed under the Apache License, Version 2.0
 
 """todo
-facebook/twitter id でもつけないと、同じ人が別のアカウントで入っていると困る
-リファーラ？
-
 確認のメールを発信。
 バックアップ。
 事務局による、FAX からの転載による応募

@@ -100,13 +100,16 @@ class FbLogin(BaseHandler):
             return
 
         name=profile["name"]
-        set_cookie(self.response, "fb_user", str(profile["id"]),
+        id=profile["id"]
+        set_cookie(self.response, "fb_user", id,
                    expires=time.time() + 30 * 86400)
 
-        self.session["uid"] = name
+        # 数字の id, 発行元も含めて、ユニークにする。
+        self.session["uid"] = name + "." + id + "@facebook"
+
         # これはもういらない。
         del self.session["fb_state"]
-        dbgprint("name=%s id=%s logged in with facebook" % (name, profile["id"]))
+        dbgprint("name=%s id=%s logged in with facebook" % (name, id))
         self.redirect("/")
 
 
