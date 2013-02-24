@@ -137,7 +137,6 @@ class Login(BaseHandler):
         # http://developers.facebook.com/docs/howtos/login/server-side-login/
         hash = hmac.new(str(random.random()), digestmod=hashlib.sha1)
         self.session["fb_state"] = hash.hexdigest()
-        dbgprint(self.session["fb_state"])
         args = dict(client_id=facebookoauth.FACEBOOK_APP_ID,
                     state=hash.hexdigest(),
                     redirect_uri="%s://%s/fblogin" % \

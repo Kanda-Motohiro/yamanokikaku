@@ -16,6 +16,7 @@ import datetime
 import logging
 import traceback
 import unicodedata
+import cgi
 from django.template import Context, loader
 import webapp2
 from webapp2_extras import sessions
@@ -170,6 +171,9 @@ else:
 
 
 def err(handler, message):
+    # message は、自分のソースにハードコードしてあるものしか来ないはずだけど。
+    message = cgi.escape(message)
+
     els = list(traceback.extract_stack()[-2][:3])
     els[0] = os.path.basename(els[0])
     logging.error(str(els) + unicode(message))

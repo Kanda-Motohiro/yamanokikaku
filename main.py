@@ -26,8 +26,7 @@ from login import Login, getKikakuAndKaiin, getKikaku, getCurrentUserId, \
 getKaiin, openid2Kaiin, TwLogin, Logout, getLogoutUrl
 from facebookoauth import FbLogin
 
-a = hashlib.md5()
-a.update(str(random.random()))
+a = hashlib.md5(str(random.random()))
 
 # oauth サポートのため、クッキーでセッション管理をする。以下のサンプル参照。
 # http://webapp-improved.appspot.com/api/webapp2_extras/sessions.html
@@ -162,7 +161,9 @@ class Detail(BaseHandler):
 
 class SankouRireki(webapp2.RequestHandler):
     def get(self):
-        "指定された会員の、今までの山行履歴を表示する。"
+        """指定された会員の、今までの山行履歴を表示する。
+        自分、ではない。会員は、他の任意の会員の履歴を参照できる。
+        """
         key = self.request.get("no")
         if not key:
             err(self, "no")
