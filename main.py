@@ -11,14 +11,15 @@
 しめきり処理。参加者名簿を印刷、リーダーにメール送信。
 """
 import datetime
+import cgi
+import hashlib
+import random
 from google.appengine.ext import db
 import webapp2
 from util import *
 #from util import date2Tukihi,shimekiriNashi,date2Tukihi,logerror,err, \
 #render_template_and_write_in_sjis,dbgprint,renderKaiinTemplate,
 import model
-import hashlib
-import random
 from login import Login, getKikakuAndKaiin, getKikaku, getCurrentUserId, \
 getKaiin, openid2Kaiin, TwLogin, Logout, getLogoutUrl
 from facebookoauth import FbLogin
@@ -264,7 +265,7 @@ def parseKaiinForm(request):
             """
         return None, error
 
-    out["name"] = name
+    out["name"] = cgi.escape(name)
     out["no"] = no
 
     for key in ("seibetsu", "tel", "fax", "mail", "address",
@@ -272,7 +273,7 @@ def parseKaiinForm(request):
         "saikin0", "saikin1", "saikin2", "kanyuuHoken"):
         val = request.get(key)
         if val != "":
-            out[key] = val
+            out[key] = cgi.escape(val)
 
     return out, ""
 

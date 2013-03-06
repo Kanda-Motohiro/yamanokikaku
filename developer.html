@@ -4,20 +4,33 @@
 </head><body>
 <h1>Google App Engine with OpenID/OAuth 携帯サイト開発者向け情報</h1>
 どちらかというと、私の覚え書きです。
-OpenID のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
+OpenID/OAuth のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
 移るトラブルも記録しておきます。
 
 <h2>sign in with facebook サポート</h2>
-facebook-sdk/examples/oauth/facebookoauth.py をコピーして、なおして使ったら、
+<a href="http://developers.facebook.com/docs/howtos/login/server-side-login/">
+Login for Server-side Apps</a>を読んで、
+<a href="https://github.com/pythonforfacebook/facebook-sdk">Facebook Python SDK</a>から、
+examples/oauth/facebookoauth.py をコピーして、なおして使ったら、
 あっさり動いた。Javascript SDK を使うバージョンも作ったが、他の OpenID, Twitter
  ログオンと画面が違ってくるので、やめた。<br>
+
 <h3>AttributeError: ResponseHeaders instance has no attribute '_headers'</h3>
-http://stackoverflow.com/questions/7956842/can-i-use-gae-python-2-7-django-utils-translation<br>
+<a href="http://stackoverflow.com/questions/7956842/can-i-use-gae-python-2-7-django-utils-translation">古いサンプルを使うと、webapp2 でこう言われる</a><br>
+<br>
 フィーチャーフォンでログインしようとしたら、証明書が不正だと言って、
-進めなかった。<br>
+進めなかった。クッキーを受け付けないものも多いし、結局、OpenID, OAuth とかに
+関係なく、フィーチャーフォン専用の作りこみが必要かもしれませんね。
+簡単ログイン。<br>
+<br>
 誤って、github で、アプリケーションシークレットをハードコードしたソースを
 さらしてしまった。再設定した。<br>
 <br>
+<a href="http://www.sakimura.org/2012/02/1487/">単なる OAuth 2.0 を認証に使うと、車が通れるほどのどでかいセキュリティー・ホールができる</a>
+に従って、facebookoauth.py で、クッキーを、アプリケーションのシークレットで
+サインする部分をそのまま生かしたのですが、あれでよいのでしょうかね。<br>
+また、ランダムな state をつけて、CSRF 対策、というところも、コードに入れました。
+
 
 <h3>API Error Code: 191</h3>
 API Error Description: The specified URL is not owned by the application<br>
@@ -28,17 +41,19 @@ localhost の開発サーバーでやるときと、アップロードした時�
 <h2>sign in with twitter サポート</h2>
 ２０１３年２月。<br>
 まず、自分でクッキーを使ってセッションを記憶する<br>
-http://webapp-improved.appspot.com/api/webapp2_extras/sessions.html<br>
-tweepy を使った。<br>
-http://www.sakimura.org/2011/05/1087/ - 
-非技術者のためのOAuth認証(?)とOpenIDの違い入門<br>
+<a href="http://webapp-improved.appspot.com/api/webapp2_extras/sessions.html">
+webapp2 のセッション</a><br>
+<a href="https://github.com/tweepy/tweepy">tweepy</a>を使った。<br>
+<a href="http://www.sakimura.org/2011/05/1087/">
+非技術者のためのOAuth認証(?)とOpenIDの違い入門</a>
 によると、oauth は認証プロトコルではない、とのことですが。<br>
 
 <h3>TweepError HTTPError()</h3>
 get_authorization_url で、エラーになる。
 ワイアシャークでパケットを取ったら、ていねいなエラーメッセージが入っていた。
 <pre>Desktop applications only support the oauth_callback value 'oob'</pre>
-http://d.hatena.ne.jp/speg03/20091019/1255957580 - TwitterのOAuthでCallbackさせるときの注意点<br>
+<a href="http://d.hatena.ne.jp/speg03/20091019/1255957580">
+TwitterのOAuthでCallbackさせるときの注意点</a><br>
 を読んで、自分のアプリケーションの設定ページで、Callback URL: を入れたら、なおった。<br>
 
 <h2>app engine python 2.7</h2>
