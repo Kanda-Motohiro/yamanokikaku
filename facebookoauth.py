@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding=utf-8
 #
 # Copyright 2010 Facebook
 #
@@ -14,6 +15,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+# Copyright (c) 2013 Kanda.Motohiro@gmail.com
+
 """A barebones AppEngine application that uses Facebook for login.
 
 This application uses OAuth 2.0 directly rather than relying on Facebook's
@@ -26,10 +29,6 @@ Using JavaScript is recommended if it is feasible for your application,
 as it handles some complex authentication states that can only be detected
 in client-side code.
 """
-
-FACEBOOK_APP_ID = "your app id"
-FACEBOOK_APP_SECRET = "your app secret"
-
 import base64
 import cgi
 import Cookie
@@ -48,70 +47,74 @@ from google.appengine.ext import webapp
 from google.appengine.ext.webapp import util
 from google.appengine.ext.webapp import template
 
+from util import BaseHandler, logerror, dbgprint, err
+import model
 
-class User(db.Model):
-    id = db.StringProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-    updated = db.DateTimeProperty(auto_now=True)
-    name = db.StringProperty(required=True)
-    profile_url = db.StringProperty(required=True)
-    access_token = db.StringProperty(required=True)
+FACEBOOK_APP_ID = "262276473906025"
 
 
-class BaseHandler(webapp.RequestHandler):
-    @property
-    def current_user(self):
-        """Returns the logged in Facebook user, or None if unconnected."""
-        if not hasattr(self, "_current_user"):
-            self._current_user = None
-            user_id = parse_cookie(self.request.cookies.get("fb_user"))
-            if user_id:
-                self._current_user = User.get_by_key_name(user_id)
-        return self._current_user
-
-
-class HomeHandler(BaseHandler):
+class FbLogin(BaseHandler):
     def get(self):
-        path = os.path.join(os.path.dirname(__file__), "oauth.html")
-        args = dict(current_user=self.current_user)
-        self.response.out.write(template.render(path, args))
-
-
-class LoginHandler(BaseHandler):
-    def get(self):
-        verification_code = self.request.get("code")
-        args = dict(client_id=FACEBOOK_APP_ID,
-                    redirect_uri=self.request.path_url)
-        if self.request.get("code"):
-            args["client_secret"] = FACEBOOK_APP_SECRET
-            args["code"] = self.request.get("code")
-            response = cgi.parse_qs(urllib.urlopen(
-                "https://graph.facebook.com/oauth/access_token?" +
-                urllib.urlencode(args)).read())
-            access_token = response["access_token"][-1]
-
-            # Download the user profile and cache a local instance of the
-            # basic profile info
-            profile = json.load(urllib.urlopen(
-                "https://graph.facebook.com/me?" +
-                urllib.urlencode(dict(access_token=access_token))))
-            user = User(key_name=str(profile["id"]), id=str(profile["id"]),
-                        name=profile["name"], access_token=access_token,
-                        profile_url=profile["link"])
-            user.put()
-            set_cookie(self.response, "fb_user", str(profile["id"]),
-                       expires=time.time() + 30 * 86400)
-            self.redirect("/")
+        # http://developers.facebook.com/docs/howtos/login/server-side-login/
+        # に、こうせよと書いてあるけど。
+        state = self.session.get("fb_state")
+        state2 = self.request.get("state")
+        if state and state2 and state == state2:
+            pass
         else:
-            self.redirect(
-                "https://graph.facebook.com/oauth/authorize?" +
-                urllib.urlencode(args))
+            err(self, "state does not match. CSRF?. %s:%s " % (state, state2))
+            return
 
+        code = self.request.get("code")
+        if not code:
+            # 4.1.2.1 error というのが、フォームに入ってくる。
+            err(self, "code not found. " + self.request.get("error"))
+            return
+        # なんで、urlopen するのに、redirect_uri が必要か、と思ったが、
+        # そういう、oauth 2.0 仕様なんだそうだ。4.1 (E)
+        args = dict(client_id=FACEBOOK_APP_ID,
+                    redirect_uri=self.request.path_url,
+                    client_secret=model.configs["facebook_app_secret"],
+                    code=code)
+        try:
+            response = cgi.parse_qs(urllib.urlopen(
+            "https://graph.facebook.com/oauth/access_token?" +
+            urllib.urlencode(args)).read())
+        except Exception, e:
+            err(self, "access_token " + str(e))
+            return
+        # json で返ってくるはず。
+        if "access_token" not in response:
+            err(self, "access_token not found " + str(response))
+            return
+        access_token = response["access_token"][-1]
 
-class LogoutHandler(BaseHandler):
-    def get(self):
-        set_cookie(self.response, "fb_user", "", expires=time.time() - 86400)
+        # Download the user profile and cache a local instance of the
+        # basic profile info
+        try:
+            profile = json.load(urllib.urlopen(
+            "https://graph.facebook.com/me?" +
+            urllib.urlencode(dict(access_token=access_token))))
+        except Exception, e:
+            err(self, "me " + e)
+            return
+
+        name=profile["name"]
+        id=profile["id"]
+        set_cookie(self.response, "fb_user", id,
+                   expires=time.time() + 30 * 86400)
+
+        # 数字の id, 発行元も含めて、ユニークにする。
+        self.session["uid"] = name + "." + id + "@facebook"
+
+        # これはもういらない。
+        del self.session["fb_state"]
+        dbgprint("name=%s id=%s logged in with facebook" % (name, id))
         self.redirect("/")
+
+
+def fbLogoutHook(self):
+    set_cookie(self.response, "fb_user", "", expires=time.time() - 86400)
 
 
 def set_cookie(response, name, value, domain=None, path="/", expires=None):
@@ -127,7 +130,7 @@ def set_cookie(response, name, value, domain=None, path="/", expires=None):
     if expires:
         cookie[name]["expires"] = email.utils.formatdate(
             expires, localtime=False, usegmt=True)
-    response.headers._headers.append(("Set-Cookie", cookie.output()[12:]))
+    response.headers.add("Set-Cookie", cookie.output()[12:])
 
 
 def parse_cookie(value):
@@ -156,19 +159,9 @@ def cookie_signature(*parts):
     We use the Facebook app secret since it is different for every app (so
     people using this example don't accidentally all use the same secret).
     """
-    hash = hmac.new(FACEBOOK_APP_SECRET, digestmod=hashlib.sha1)
+    hash = hmac.new(model.configs["facebook_app_secret"], 
+            digestmod=hashlib.sha1)
     for part in parts:
         hash.update(part)
     return hash.hexdigest()
-
-
-def main():
-    util.run_wsgi_app(webapp.WSGIApplication([
-        (r"/", HomeHandler),
-        (r"/auth/login", LoginHandler),
-        (r"/auth/logout", LogoutHandler),
-    ]))
-
-
-if __name__ == "__main__":
-    main()
+# eof
