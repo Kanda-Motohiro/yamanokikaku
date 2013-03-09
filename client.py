@@ -20,7 +20,7 @@ headers = { }
 
 def login():
     global headers
-    headers = { 'Cookie': Cookie }
+    headers = { "Cookie": Cookie }
 
 def logout():
     global headers
@@ -74,25 +74,25 @@ mainActions = [ "", "login", "table", "kaiin",
 ""
 ]
 
-tabeiFullRecord =  {'no':'9010', 
-'name':u'田部井淳子'.encode("cp932"),'seibetsu':u'女'.encode("cp932"),
-'tel':'123-4567', 'fax':'fax-1234', 'mail':'tabei@yahoo.jp', 
-'address':u'横浜市中央区１−２−３'.encode("cp932"),
-'kinkyuName':u'田部井夫'.encode("cp932"),'kinkyuKankei':u'夫'.encode("cp932"),
-'kinkyuAddress':u'川崎市中央区１−２−３'.encode("cp932"),'kinkyuTel':'321-4567',
-'saikin0':u'２０００年１月　マナスル'.encode("cp932"),
-'saikin1':u'２００２年１月　ダウラギリ'.encode("cp932"),
-'saikin2':u'２００３年１月　ホワイトゾンビ'.encode("cp932"),
-'kanyuuHoken':u'山岳保険'.encode("cp932")}
+tabeiFullRecord =  {"no":"9010", 
+"name":u"田部井淳子".encode("cp932"),"seibetsu":u"女".encode("cp932"),
+"tel":"123-4567", "fax":"fax-1234", "mail":"tabei@yahoo.jp", 
+"address":u"横浜市中央区１−２−３".encode("cp932"),
+"kinkyuName":u"田部井夫".encode("cp932"),"kinkyuKankei":u"夫".encode("cp932"),
+"kinkyuAddress":u"川崎市中央区１−２−３".encode("cp932"),"kinkyuTel":"321-4567",
+"saikin0":u"２０００年１月　マナスル".encode("cp932"),
+"saikin1":u"２００２年１月　ダウラギリ".encode("cp932"),
+"saikin2":u"２００３年１月　ホワイトゾンビ".encode("cp932"),
+"kanyuuHoken":u"山岳保険".encode("cp932")}
 
 def doKaiinPost():
     for form in (tabeiFullRecord,
- {'invalid-key':'hello'}, {'no':'1234'}, {'name':'Tanabe'},
- {'no':'hello', 'name':'Tabei'},
- {'no':'9000', 'name':'Tabei'},
- {'no':'9002', 'name':u'田部井'.encode("utf8")},
- {'no':'9003', 'name':u'田部井'.encode("EUCJP")},
- {'no':'9009', 'name':u'田部井'.encode("cp932")},
+ {"invalid-key":"hello"}, {"no":"1234"}, {"name":"Tanabe"},
+ {"no":"hello", "name":"Tabei"},
+ {"no":"9000", "name":"Tabei"},
+ {"no":"9002", "name":u"田部井".encode("utf8")},
+ {"no":"9003", "name":u"田部井".encode("EUCJP")},
+ {"no":"9009", "name":u"田部井".encode("cp932")},
 tabeiFullRecord
  ):
         print "\n#### " + str(form)[:64] + " ####\n"
@@ -144,6 +144,6 @@ def main():
     doKaiinPost()
     logout()
     
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 # eof

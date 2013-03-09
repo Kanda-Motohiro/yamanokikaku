@@ -24,10 +24,10 @@ from webapp2_extras import sessions
 
 def render_template_and_write_in_sjis(handler, template_filename, body):
     # ところで、app.yaml に、テンプレートを static と書いてはいけない。
-    handler.response.headers['Content-Type'] = "text/html; charset=cp932"
+    handler.response.headers["Content-Type"] = "text/html; charset=cp932"
 
     t = loader.get_template(template_filename)
-    uni = t.render(Context({'body': body}))
+    uni = t.render(Context({"body": body}))
     # 丸付き数字は、シフトJIS では見えない。
     handler.response.out.write(uni.encode("cp932", "replace"))
     return
@@ -46,14 +46,14 @@ def renderKaiinTemplate(handler, logout, kaiin):
     if kaiin.name == u"未登録":
         unsubscribe = ""
     else:
-        unsubscribe = """<a href='/unsubscribe'>
+        unsubscribe = """<a href="/unsubscribe">
             このサイトへの登録を削除する</a>。"""
 
-    handler.response.headers['Content-Type'] = "text/html; charset=cp932"
-    t = loader.get_template('kaiin.tmpl')
-    uni = t.render(Context({'logout': logout, 'unsubscribe': unsubscribe,
-        'kaiin': kaiin,
-        'male': male, 'female': female}))
+    handler.response.headers["Content-Type"] = "text/html; charset=cp932"
+    t = loader.get_template("kaiin.tmpl")
+    uni = t.render(Context({"logout": logout, "unsubscribe": unsubscribe,
+        "kaiin": kaiin,
+        "male": male, "female": female}))
     handler.response.out.write(uni.encode("cp932", "replace"))
     return
 
@@ -172,7 +172,7 @@ else:
 
 def err(handler, message):
     # message は、自分のソースにハードコードしてあるものしか来ないはずだけど。
-    message = cgi.escape(message)
+    message = cgi.escape(message, quote=True)
 
     els = list(traceback.extract_stack()[-2][:3])
     els[0] = os.path.basename(els[0])
@@ -180,8 +180,8 @@ def err(handler, message):
     out = u"""yamanokikaku: ご迷惑をおかけしております。
 システムエラーが発生しました。<br>""" + unicode(els) + unicode(message)
 
-    handler.response.headers['Content-Type'] = "text/html; charset=cp932"
-    handler.response.out.write('<html><body>%s</body></html>' % \
+    handler.response.headers["Content-Type"] = "text/html; charset=cp932"
+    handler.response.out.write("<html><body>%s</body></html>" % \
         out.encode("cp932", "replace"))
     return
 
@@ -208,7 +208,7 @@ def datetest():
     print tukihi2Kikan(u"1日", today)
     print tukihi2Kikan(u"7日（金）～9日（日）", today)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     datetest()
     #_test()
 # eof

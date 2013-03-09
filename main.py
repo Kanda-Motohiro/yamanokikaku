@@ -29,7 +29,7 @@ a = hashlib.md5(str(random.random()))
 # oauth サポートのため、クッキーでセッション管理をする。以下のサンプル参照。
 # http://webapp-improved.appspot.com/api/webapp2_extras/sessions.html
 config = {}
-config['webapp2_extras.sessions'] = {'secret_key': a.hexdigest()}
+config["webapp2_extras.sessions"] = {"secret_key": a.hexdigest()}
 
 
 #
@@ -59,7 +59,7 @@ class Apply(BaseHandler):
                 (other.no, other.title, other.kijitu(),
                 rec.no, rec.title, rec.kijitu())
 
-                render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+                render_template_and_write_in_sjis(self, "blank.tmpl", body)
                 return
 
         # 参加者一覧に、このユーザーを追加する。
@@ -122,7 +122,7 @@ class Detail(BaseHandler):
         # 自分の申し込みは、取り消せる。
         # 同じ所に２度、申し込みはできない。
         if user.displayName() in rec.members:
-            moushikomi = u"<a href='/cancel?key=%s'>取り消す</a>" % rec.key()
+            moushikomi = u'<a href="/cancel?key=%s">取り消す</a>' % rec.key()
 
         # 締切日をすぎていれば、申し込みは表示しない。
         #elif rec.shimekiri < datetime.date.today():
@@ -137,23 +137,23 @@ class Detail(BaseHandler):
         #elif rec.teiin != 0 and rec.teiin <= len(rec.members):
         #    moushikomi = ""
         else:
-            moushikomi = u"<a href='/apply?key=%s'>申し込む</a>" % rec.key()
+            moushikomi = u'<a href="/apply?key=%s">申し込む</a>' % rec.key()
 
         # 応募者一覧を、その山行履歴を見られるリンクで表示する。
         memberLinks = []
         for dname in rec.members:
             no, name = model.parseDisplayName(dname)
-            memberLinks.append(u"<a href='/sankourireki?no=%d'>%d</a> %s" %
+            memberLinks.append(u'<a href="/sankourireki?no=%d">%d</a> %s' %
                 (no, no, name))
 
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
             u"リーダー：%s " % ",".join(rec.leaders) + \
             u"メンバー：%s " % ",".join(memberLinks) + \
             "<br>\n" + moushikomi + "<br>\n" + \
-            u"""<br><a href='/shimekiri?key=%s'>応募者名簿を表示する</a>。
+            u"""<br><a href="/shimekiri?key=%s">応募者名簿を表示する</a>。
             デモのため、事務局以外の一般会員からも操作できるようにしています。""" % rec.key()
 
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        render_template_and_write_in_sjis(self, "blank.tmpl", body)
         return
 
 
@@ -194,7 +194,7 @@ class SankouRireki(webapp2.RequestHandler):
         body = u"<h2>%s さんの山行履歴</h2>%s<br>" % \
             (kaiin.displayName(), "<br>\n".join(text))
 
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        render_template_and_write_in_sjis(self, "blank.tmpl", body)
         return
 
 
@@ -232,7 +232,7 @@ class Shimekiri(webapp2.RequestHandler):
             kaiinList.append(kaiinInfo)
 
         body += "<br>\n".join(kaiinList)
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        render_template_and_write_in_sjis(self, "blank.tmpl", body)
         return
 
 
@@ -265,7 +265,7 @@ def parseKaiinForm(request):
             """
         return None, error
 
-    out["name"] = cgi.escape(name)
+    out["name"] = cgi.escape(name, quote=True)
     out["no"] = no
 
     for key in ("seibetsu", "tel", "fax", "mail", "address",
@@ -273,7 +273,7 @@ def parseKaiinForm(request):
         "saikin0", "saikin1", "saikin2", "kanyuuHoken"):
         val = request.get(key)
         if val != "":
-            out[key] = cgi.escape(val)
+            out[key] = cgi.escape(val, quote=True)
 
     return out, ""
 
@@ -295,7 +295,7 @@ class KaiinTouroku(BaseHandler):
     def post(self):
         f, error = parseKaiinForm(self.request)
         if f is None:
-            render_template_and_write_in_sjis(self, 'blank.tmpl', error)
+            render_template_and_write_in_sjis(self, "blank.tmpl", error)
             return
 
         uid = getCurrentUserId(self)
@@ -354,7 +354,7 @@ class MainPage(BaseHandler):
         uid = getCurrentUserId(self)
         if uid is None:
             body = u"""申し込みなどをするには、
-            <a href='/login'>ログイン</a>して、会員登録をして下さい。"""
+            <a href="/login">ログイン</a>して、会員登録をして下さい。"""
         else:
             kaiin = openid2Kaiin(uid)
             if kaiin is None:
@@ -364,9 +364,9 @@ class MainPage(BaseHandler):
             else:
                 body = u"""こんにちわ %s さん。申し込み、取り消しをするには、
 番号をクリックして下さい。<br>
-<a href='/kaiin'>会員情報</a>&nbsp;
-<a href='/sankourireki?no=%d'>最近行った山</a>&nbsp;
-<a href='%s'>ログアウト</a>。""" % \
+<a href="/kaiin">会員情報</a>&nbsp;
+<a href="/sankourireki?no=%d">最近行った山</a>&nbsp;
+<a href="%s">ログアウト</a>。""" % \
                 (kaiin.displayName(), kaiin.no,
                     getLogoutUrl(self))
 
@@ -375,7 +375,7 @@ class MainPage(BaseHandler):
 
         body += SankouKikakuIchiran(kaiin)
 
-        render_template_and_write_in_sjis(self, 'main.tmpl', body)
+        render_template_and_write_in_sjis(self, "main.tmpl", body)
         return
 
 # end MainPage
@@ -398,7 +398,7 @@ def SankouKikakuIchiran(kaiin, table=False):
     kikakuList = []
     for rec in query:
         if kaiin:
-            no = "<a href='/detail?key=%s'>%d</a> " % (rec.key(), rec.no)
+            no = '<a href="/detail?key=%s">%d</a> ' % (rec.key(), rec.no)
         else:
             no = "%d " % rec.no
 
@@ -422,8 +422,8 @@ def SankouKikakuIchiran(kaiin, table=False):
                 else:
                     members = ",".join(rec.members[:4]) + "..."
 
-                kikaku += u"<tr><td colspan='7'>\
-                    リーダー:%s | メンバー:%s</td></tr>" % \
+                kikaku += u'<tr><td colspan="7">\
+                    リーダー:%s | メンバー:%s</td></tr>' % \
                     (",".join(rec.leaders), members)
 
         kikakuList.append(kikaku)
@@ -441,7 +441,7 @@ class Table(BaseHandler):
     def get(self):
         kaiin = getKaiin(self)
         body = SankouKikakuIchiran(kaiin, table=True)
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        render_template_and_write_in_sjis(self, "blank.tmpl", body)
         return
 
 
@@ -457,24 +457,24 @@ class Debug(webapp2.RequestHandler):
         else:
             key = recs[0].key()
         # プレーンテキスト
-        self.response.headers['Content-Type'] = "text/plain"
+        self.response.headers["Content-Type"] = "text/plain"
         self.response.out.write("key=%s" % key)
 
 app = webapp2.WSGIApplication([
-    ('/', MainPage),
-    ('/login', Login),
-    ('/twlogin', TwLogin),
-    ('/fblogin', FbLogin),
-    ('/logout', Logout),
-    ('/table', Table),
-    ('/detail', Detail),
-    ('/shimekiri', Shimekiri),
-    ('/kaiin', KaiinTouroku),
-    ('/unsubscribe', KaiinSakujo),
-    ('/sankourireki', SankouRireki),
-    ('/debug', Debug),
-    ('/apply', Apply),
-    ('/cancel', Cancel)
+    ("/", MainPage),
+    ("/login", Login),
+    ("/twlogin", TwLogin),
+    ("/fblogin", FbLogin),
+    ("/logout", Logout),
+    ("/table", Table),
+    ("/detail", Detail),
+    ("/shimekiri", Shimekiri),
+    ("/kaiin", KaiinTouroku),
+    ("/unsubscribe", KaiinSakujo),
+    ("/sankourireki", SankouRireki),
+    ("/debug", Debug),
+    ("/apply", Apply),
+    ("/cancel", Cancel)
     ],
     config=config,
     debug=True)

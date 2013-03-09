@@ -28,7 +28,7 @@ def openid2Kaiin(openid):
 
 def getKikaku(handler):
     "山行企画のキーをもらって、データベースレコードを返す。"
-    key = handler.request.get('key')
+    key = handler.request.get("key")
     if not key:
         logerror("no key")
         return None
@@ -125,18 +125,18 @@ class Login(BaseHandler):
             tw_redirect_url = None
 
         # 以下は OpenID
-        body = "<p><a href='%s'>google</a></p>" % \
+        body = '<p><a href="%s">google</a></p>' % \
         users.create_login_url(
-            federated_identity='www.google.com/accounts/o8/id') + \
-            "<p><a href='%s'>mixi</a></p>" % \
-        users.create_login_url(federated_identity='mixi.jp') + \
-        "<p><a href='%s'>biglobe</a></p>" % \
-        users.create_login_url(federated_identity='openid.biglobe.ne.jp') + \
-        "<p><a href='%s'>yahoo</a></p>" % \
-        users.create_login_url(federated_identity='yahoo.co.jp')
+            federated_identity="www.google.com/accounts/o8/id") + \
+            '<p><a href="%s">mixi</a></p>' % \
+        users.create_login_url(federated_identity="mixi.jp") + \
+        '<p><a href="%s">biglobe</a></p>' % \
+        users.create_login_url(federated_identity="openid.biglobe.ne.jp") + \
+        '<p><a href="%s">yahoo</a></p>' % \
+        users.create_login_url(federated_identity="yahoo.co.jp")
 
         if tw_redirect_url:
-            body += "<p><a href='%s'>twitter</a></p>" % tw_redirect_url
+            body += '<p><a href="%s">twitter</a></p>' % tw_redirect_url
 
         # facebook login
         # facebook-sdk/examples/oauth/facebookoauth.py 参照。
@@ -151,9 +151,9 @@ class Login(BaseHandler):
 
         facebok_login_url = "https://graph.facebook.com/oauth/authorize?" + \
             urllib.urlencode(args)
-        body += "<p><a href='%s'>facebook</a></p>" % facebok_login_url
+        body += '<p><a href="%s">facebook</a></p>' % facebok_login_url
 
-        render_template_and_write_in_sjis(self, 'login.tmpl', body)
+        render_template_and_write_in_sjis(self, "login.tmpl", body)
 
 
 class TwLogin(BaseHandler):

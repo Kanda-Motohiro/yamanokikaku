@@ -177,7 +177,7 @@ def loadConfig():
             .fetch(1)
         if recs:
             value = recs[0].value
-            configs[name] = value.encode('utf-8')
+            configs[name] = value.encode("utf-8")
         else:
             dbgprint("%s not found" % name)
 

@@ -16,17 +16,17 @@ class KaiinTouroku(webapp2.RequestHandler):
         body = u"""<p>会員一覧を、カンマ区切りで表した、
         kaiin.csv あるいは、類似の名前のファイルを
         指定して、「送信」ボタンを押して下さい。</p>
-<p><form action='/admin/kaiin' method='post' enctype='multipart/form-data'></p>
-        <p><input type='file' name='file'></p>
-        <p><input type='submit' value='送信'></p>
+<p><form action="/admin/kaiin" method="post" enctype="multipart/form-data"></p>
+        <p><input type="file" name="file"></p>
+        <p><input type="submit" value="送信"></p>
         </form></p>"""
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        render_template_and_write_in_sjis(self, "blank.tmpl", body)
 
     def post(self):
         buf = self.request.get("file")
         dbgprint(buf[:32])
         try:
-            uni = buf.decode('cp932')
+            uni = buf.decode("cp932")
         except UnicodeDecodeError, e:
             self.response.out.write("""<html><body>
                 Invalid file? Must be a csv text file in SJIS.<br>%s
@@ -49,12 +49,12 @@ class KikakuTouroku(webapp2.RequestHandler):
         body = u"""<p>山行企画一覧を、カンマ区切りで表した、
         sankouannnai-yotei.csv あるいは、類似の名前のファイルを
         指定して、「送信」ボタンを押して下さい。</p>
-        <p><form action='/admin/kikaku' method='post'
-            enctype='multipart/form-data'></p>
-        <p><input type='file' name='file'></p>
-        <p><input type='submit' value='送信'></p>
+        <p><form action="/admin/kikaku" method="post"
+            enctype="multipart/form-data"></p>
+        <p><input type="file" name="file"></p>
+        <p><input type="submit" value="送信"></p>
         </form>"""
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        render_template_and_write_in_sjis(self, "blank.tmpl", body)
 
     def post(self):
         # python 2.7 webapp2 環境では、
@@ -120,7 +120,7 @@ class InitLoad(webapp2.RequestHandler):
         rec = Kaiin(no=9002, name=u"平山ユージ", openid="test@example.com")
         rec.put()
 
-        self.response.out.write('<html><body>done</body></html>')
+        self.response.out.write("<html><body>done</body></html>")
 
 
 class DumpKikaku(webapp2.RequestHandler):
@@ -129,7 +129,7 @@ class DumpKikaku(webapp2.RequestHandler):
         for rec in Kikaku.all():
             out += unicode(rec) + "<br>\n"
 
-        render_template_and_write_in_sjis(self, 'blank.tmpl', "".join(out))
+        render_template_and_write_in_sjis(self, "blank.tmpl", "".join(out))
         return
 
 
@@ -139,7 +139,7 @@ class DumpKaiin(webapp2.RequestHandler):
         for rec in Kaiin.all():
             out += unicode(rec) + str(rec.kikakuList) + "<br>\n"
 
-        render_template_and_write_in_sjis(self, 'blank.tmpl', "".join(out))
+        render_template_and_write_in_sjis(self, "blank.tmpl", "".join(out))
         return
 
 
@@ -155,17 +155,17 @@ class DeleteAll(webapp2.RequestHandler):
         for rec in Kaiin.all():
             db.delete(rec)
 
-        self.response.out.write('<html><body>delete done</body></html>')
+        self.response.out.write("<html><body>delete done</body></html>")
 
 class InitConfig(webapp2.RequestHandler):
     def get(self):
         body = u"""Config
-<p><form action='/admin/config' method='post' enctype="multipart/form-data"></p>
-        <p>name:<input type='text' name='name' size='40'></p>
-        <p>value:<input type='text' name='value' size='40'></p>
-        <p><input type='submit' value='送信'></p>
+<p><form action="/admin/config" method="post" enctype="multipart/form-data"></p>
+        <p>name:<input type="text" name="name" size="40"></p>
+        <p>value:<input type="text" name="value" size="40"></p>
+        <p><input type="submit" value="送信"></p>
         </form></p>"""
-        render_template_and_write_in_sjis(self, 'blank.tmpl', body)
+        render_template_and_write_in_sjis(self, "blank.tmpl", body)
 
     def post(self):
         name = self.request.get("name")
@@ -178,13 +178,13 @@ class InitConfig(webapp2.RequestHandler):
         self.redirect("/")
 
 app = webapp2.WSGIApplication([
-    ('/admin/deleteall', DeleteAll),
-    ('/admin/initload', InitLoad),
-    ('/admin/config', InitConfig),
+    ("/admin/deleteall", DeleteAll),
+    ("/admin/initload", InitLoad),
+    ("/admin/config", InitConfig),
 
-    ('/admin/kaiin', KaiinTouroku),
-    ('/admin/dumpkaiin', DumpKaiin),
-    ('/admin/dumpkikaku', DumpKikaku),
-    ('/admin/kikaku', KikakuTouroku)
+    ("/admin/kaiin", KaiinTouroku),
+    ("/admin/dumpkaiin", DumpKaiin),
+    ("/admin/dumpkikaku", DumpKikaku),
+    ("/admin/kikaku", KikakuTouroku)
     ], debug=True)
 # eof

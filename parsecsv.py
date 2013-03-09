@@ -6,7 +6,7 @@
 Parse comma separated values.
 sjis では、
   File "parsecsv.py", line 56
-SyntaxError: 'shift_jis' codec can't decode bytes in position 5-6:
+SyntaxError: "shift_jis" codec can't decode bytes in position 5-6:
 illegal multibyte sequence
 といわれる。どうも、No が１文字になったやつとか、丸付き数字とかが悪いらしい。
 cp932 なら、動いた。
@@ -34,7 +34,7 @@ def parseSankouKikakuCsvFile(buf):
     　　　できなかった行の配列。文字は、unicode になっている。
     """
     try:
-        uni = buf.decode('cp932')
+        uni = buf.decode("cp932")
     except UnicodeDecodeError, e:
         return None, [u"ファイルの文字コードが、シフトJIS ではないようです。" \
                         + str(e), ]
@@ -104,7 +104,7 @@ def parseSankouKikakuCsvFile(buf):
 def main():
     """ローカル実行して、山行企画ファイルが予期されるフォーマットか
     確認するため。"""
-    if os.name == 'posix':
+    if os.name == "posix":
         encoding = "utf-8"
     else:
         encoding = "cp932"  # on Windows
@@ -160,6 +160,6 @@ sample = """
 30299,8日（土）～9日（日）,苗場山,B-B-6,居関、佐治,8/29,8
 30281,8日（土）～10日（月）,*森吉山,B-B-7,坪井三、鈴木茂,8/8,8
 """
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 # eof
