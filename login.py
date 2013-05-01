@@ -124,7 +124,9 @@ class Login(BaseHandler):
             logerror(e)
             tw_redirect_url = None
 
+        #
         # 以下は OpenID
+        #
         body = '<p><a href="%s">google</a></p>' % \
         users.create_login_url(
             federated_identity="www.google.com/accounts/o8/id") + \
@@ -172,6 +174,7 @@ class TwLogin(BaseHandler):
                 # アプリケーション認証を断られました
                 logerror(msg)
                 self.redirect("/")
+                return
             err(self, u"もう一度、ログインしてください。 " + msg)
             # ２回やったら、うまくいったことがあった。
             return
@@ -209,7 +212,6 @@ class Logout(BaseHandler):
         "oauth のときは、自分でクッキーにログイン状態を持っているので、消す。"
         if self.session.get("uid"):
             del self.session["uid"]
-        facebookoauth.fbLogoutHook(self)
 
         self.redirect("/")
 # eof

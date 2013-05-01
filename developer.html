@@ -7,6 +7,14 @@
 OpenID/OAuth のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
 移るトラブルも記録しておきます。
 
+<h2>securecookie.py:77 Invalid cookie signature</h2>
+セキュアクッキーは、
+<pre>
+'|'.join([value, timestamp, signature])
+</pre>
+して作る。シグネチャは、 webapp2 config secret_key で作る。
+古いものをはじいただけ？<br>
+
 <h2>sign in with facebook サポート</h2>
 <a href="http://developers.facebook.com/docs/howtos/login/server-side-login/">
 Login for Server-side Apps</a>を読んで、

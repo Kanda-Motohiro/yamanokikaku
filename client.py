@@ -48,7 +48,7 @@ def fetchAValidKey():
     print buf
 
     if (not buf.startswith("key=")) or "None" in buf:
-        sys.exit(1)
+        raise RuntimeError
     validKey = buf.replace("key=", "")
 
 def doit(op):
@@ -70,6 +70,7 @@ mainActions = [ "", "login", "table", "kaiin",
 "apply?key=ahBkZXZ-eWFtYW5va2lrYWt1cg0LEgZLaWtha3UY_AUM",
 "cancel", "cancel?key=no-such-key", "cancel?key=KEY",
 "cancel?key=ahBkZXZ-eWFtYW5va2lrYWt1cg0LEgZLaWtha3UY_AUM",
+"fblogin", "twlogin", "logout", "/unsubscribe", 
 
 ""
 ]

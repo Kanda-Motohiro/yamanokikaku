@@ -24,12 +24,12 @@ from login import Login, getKikakuAndKaiin, getKikaku, getCurrentUserId, \
 getKaiin, openid2Kaiin, TwLogin, Logout, getLogoutUrl
 from facebookoauth import FbLogin
 
-a = hashlib.md5(str(random.random()))
-
 # oauth サポートのため、クッキーでセッション管理をする。以下のサンプル参照。
 # http://webapp-improved.appspot.com/api/webapp2_extras/sessions.html
-config = {}
-config["webapp2_extras.sessions"] = {"secret_key": a.hexdigest()}
+a = hashlib.md5(str(random.random()))
+config = {"webapp2_extras.sessions":
+{ "secret_key": a.hexdigest(),
+"cookie_args": {"secure":False, "httponly":True} }}
 
 
 #
@@ -37,7 +37,7 @@ config["webapp2_extras.sessions"] = {"secret_key": a.hexdigest()}
 #
 class Apply(BaseHandler):
     def get(self):
-        "山行企画に申し込む。企画のキーが渡る。"
+        "山行企画に申し込む。key= で、企画のキーが与えられる。"
         rec, user = getKikakuAndKaiin(self)
         if rec is None:
             err(self, "invalid user/key")
@@ -70,6 +70,7 @@ class Apply(BaseHandler):
         user.kikakuList.append(rec.key())
         user.put()
 
+        # 申し込み、キャンセルの履歴を覚えておく。
         rireki = model.MoushikomiRireki(applyCancel="a",
             kaiin=name, kikakuNo=rec.no, kikakuTitle=rec.title)
         rireki.put()
@@ -112,7 +113,8 @@ class Cancel(BaseHandler):
 
 class Detail(BaseHandler):
     def get(self):
-        " 山行企画を表示し、申し込みとキャンセルのリンクをつける。"
+        """key= で与えられた、１つの山行企画を表示し、
+        申し込みとキャンセルのリンクをつける。"""
         rec, user = getKikakuAndKaiin(self)
         if rec is None:
             err(self, "invalid user/key")
@@ -136,10 +138,11 @@ class Detail(BaseHandler):
         # 定員ゼロは、無限に受付。
         #elif rec.teiin != 0 and rec.teiin <= len(rec.members):
         #    moushikomi = ""
+        # なのだけど、定員以上を受け付けることもあるので、この制限はやめ。
         else:
             moushikomi = u'<a href="/apply?key=%s">申し込む</a>' % rec.key()
 
-        # 応募者一覧を、その山行履歴を見られるリンクで表示する。
+        # 応募者一覧を、その山行履歴を見られるリンクつきで表示する。
         memberLinks = []
         for dname in rec.members:
             no, name = model.parseDisplayName(dname)
@@ -159,7 +162,7 @@ class Detail(BaseHandler):
 
 class SankouRireki(webapp2.RequestHandler):
     def get(self):
-        """指定された会員の、今までの山行履歴を表示する。
+        """no= で指定された会員の、今までの山行履歴を表示する。
         自分、ではない。会員は、他の任意の会員の履歴を参照できる。
         """
         key = self.request.get("no")
@@ -237,6 +240,7 @@ class Shimekiri(webapp2.RequestHandler):
 
 
 def parseKaiinForm(request):
+    "会員登録のフォームをパースして、辞書を返す。"
     out = dict()
 
     # 氏名はシフトJIS で来るはず
@@ -345,11 +349,15 @@ class KaiinSakujo(BaseHandler):
             err(self, "cannot delete kaiin")
             return
         db.delete(kaiin)
+        # 山行企画の方に残っている参加履歴などはそのままでいいかな。
         self.redirect("/")
 
 
 class MainPage(BaseHandler):
     def get(self):
+        " トップページ。ログインへのリンクと、山行一覧。"
+
+        # しばらく、ログイン済みか、会員登録済みか、の判定。
         kaiin = None
         uid = getCurrentUserId(self)
         if uid is None:
@@ -384,6 +392,7 @@ class MainPage(BaseHandler):
 def SankouKikakuIchiran(kaiin, table=False):
     """山行企画の一覧を、ユニコードの HTML で返す。
     table=True のときは、テーブルタグを使う。
+    会員には、参加者名簿や、申し込みリンクを示す。
     """
     # 今月以降の企画を表示する。
     y = datetime.date.today().year
@@ -439,6 +448,7 @@ def SankouKikakuIchiran(kaiin, table=False):
 
 class Table(BaseHandler):
     def get(self):
+        "テーブル形式で、山行企画一覧を表示する。"
         kaiin = getKaiin(self)
         body = SankouKikakuIchiran(kaiin, table=True)
         render_template_and_write_in_sjis(self, "blank.tmpl", body)
