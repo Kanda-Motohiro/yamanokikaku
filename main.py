@@ -26,7 +26,8 @@ from facebookoauth import FbLogin
 
 # oauth サポートのため、クッキーでセッション管理をする。以下のサンプル参照。
 # http://webapp-improved.appspot.com/api/webapp2_extras/sessions.html
-a = hashlib.md5(str(random.random()))
+a = hashlib.md5(model.configs["twitter_consumer_secret"] +
+    model.configs["facebook_app_secret"])
 config = {"webapp2_extras.sessions":
 { "secret_key": a.hexdigest(),
 "cookie_args": {"secure":False, "httponly":True} }}
