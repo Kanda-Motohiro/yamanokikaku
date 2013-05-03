@@ -34,12 +34,6 @@ examples/oauth/facebookoauth.py をコピーして、なおして使ったら、
 誤って、github で、アプリケーションシークレットをハードコードしたソースを
 さらしてしまった。再設定した。<br>
 <br>
-<a href="http://www.sakimura.org/2012/02/1487/">単なる OAuth 2.0 を認証に使うと、車が通れるほどのどでかいセキュリティー・ホールができる</a>
-に従って、facebookoauth.py で、クッキーを、アプリケーションのシークレットで
-サインする部分をそのまま生かしたのですが、あれでよいのでしょうかね。<br>
-また、ランダムな state をつけて、CSRF 対策、というところも、コードに入れました。
-
-
 <h3>API Error Code: 191</h3>
 API Error Description: The specified URL is not owned by the application<br>
 Error Message: Invalid redirect_uri: 指定されたURLは、アプリケーションの設定で許可されていません。<br>
