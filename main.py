@@ -20,9 +20,10 @@ from util import *
 #from util import date2Tukihi,shimekiriNashi,date2Tukihi,logerror,err, \
 #render_template_and_write_in_sjis,dbgprint,renderKaiinTemplate,
 import model
-from login import Login, getKikakuAndKaiin, getKikaku, getCurrentUserId, \
-getKaiin, openid2Kaiin, TwLogin, Logout, getLogoutUrl
-from facebookoauth import FbLogin
+import login
+from login import getKikakuAndKaiin, getKikaku, getCurrentUserId, \
+getKaiin, openid2Kaiin, getLogoutUrl
+import facebookoauth
 
 # oauth サポートのため、クッキーでセッション管理をする。以下のサンプル参照。
 # http://webapp-improved.appspot.com/api/webapp2_extras/sessions.html
@@ -473,10 +474,12 @@ class Debug(webapp2.RequestHandler):
 
 app = webapp2.WSGIApplication([
     ("/", MainPage),
-    ("/login", Login),
-    ("/twlogin", TwLogin),
-    ("/fblogin", FbLogin),
-    ("/logout", Logout),
+    ("/login", login.Login),
+    ("/pretwlogin", login.PreTwLogin),
+    ("/prefblogin", login.PreFbLogin),
+    ("/twlogin", login.TwLogin),
+    ("/fblogin", facebookoauth.FbLogin),
+    ("/logout", login.Logout),
     ("/table", Table),
     ("/detail", Detail),
     ("/shimekiri", Shimekiri),

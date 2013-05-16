@@ -70,7 +70,7 @@ mainActions = [ "", "login", "table", "kaiin",
 "apply?key=ahBkZXZ-eWFtYW5va2lrYWt1cg0LEgZLaWtha3UY_AUM",
 "cancel", "cancel?key=no-such-key", "cancel?key=KEY",
 "cancel?key=ahBkZXZ-eWFtYW5va2lrYWt1cg0LEgZLaWtha3UY_AUM",
-"fblogin", "twlogin", "logout", "/unsubscribe", 
+"fblogin", "twlogin", "logout", "unsubscribe", 
 
 ""
 ]

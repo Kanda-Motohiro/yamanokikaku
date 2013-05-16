@@ -7,6 +7,9 @@
 OpenID/OAuth のトラブルの他、python 2.5 + django 0.96 から、新しいバージョンに
 移るトラブルも記録しておきます。
 
+<h2>simpleauth</h2>
+https://code.google.com/p/gae-simpleauth/<br>
+
 <h2>securecookie.py:77 Invalid cookie signature</h2>
 セキュアクッキーは、
 <pre>
@@ -14,6 +17,7 @@ OpenID/OAuth のトラブルの他、python 2.5 + django 0.96 から、新しい
 </pre>
 して作る。シグネチャは、 webapp2 config secret_key で作る。
 古いものをはじいただけ？<br>
+timestamp が入っているから、シークレットは、同じでないといけないのか。<br>
 
 <h2>sign in with facebook サポート</h2>
 <a href="http://developers.facebook.com/docs/howtos/login/server-side-login/">

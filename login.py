@@ -101,15 +101,15 @@ def getKikakuAndKaiin(handler):
 consumer_key = "63g31tILRVbmELMAbuX2Bg"
 
 
-class Login(BaseHandler):
+class PreTwLogin(BaseHandler):
     def get(self):
+        " twitter ログインの準備 "
+        # http://pythonhosted.org/tweepy/html/auth_tutorial.html 参照。
         if self.request.environ.get("SERVER_NAME") == "localhost":
             proto = "http"
         else:
             proto = "https"
 
-        # twitter ログインの準備
-        # http://pythonhosted.org/tweepy/html/auth_tutorial.html 参照。
         consumer_secret = model.configs["twitter_consumer_secret"]
         callback_url = "%s://%s/twlogin" % \
             (proto, self.request.environ.get("HTTP_HOST"))
@@ -121,29 +121,22 @@ class Login(BaseHandler):
                                             auth.request_token.secret)
 
         except tweepy.TweepError, e:
-            logerror(e)
-            tw_redirect_url = None
+            err(e)
+            return
+        self.redirect(tw_redirect_url)
 
-        #
-        # 以下は OpenID
-        #
-        body = '<p><a href="%s">google</a></p>' % \
-        users.create_login_url(
-            federated_identity="www.google.com/accounts/o8/id") + \
-            '<p><a href="%s">mixi</a></p>' % \
-        users.create_login_url(federated_identity="mixi.jp") + \
-        '<p><a href="%s">biglobe</a></p>' % \
-        users.create_login_url(federated_identity="openid.biglobe.ne.jp") + \
-        '<p><a href="%s">yahoo</a></p>' % \
-        users.create_login_url(federated_identity="yahoo.co.jp")
 
-        if tw_redirect_url:
-            body += '<p><a href="%s">twitter</a></p>' % tw_redirect_url
-
-        # facebook login
+class PreFbLogin(BaseHandler):
+    def get(self):
+        " prepare facebook login "
         # facebook-sdk/examples/oauth/facebookoauth.py 参照。
         # state をセッションに入れて比較するのは、ここ。本当に効果あるの？
         # http://developers.facebook.com/docs/howtos/login/server-side-login/
+        if self.request.environ.get("SERVER_NAME") == "localhost":
+            proto = "http"
+        else:
+            proto = "https"
+
         hash = hmac.new(str(random.random()), digestmod=hashlib.sha1)
         self.session["fb_state"] = hash.hexdigest()
         args = dict(client_id=facebookoauth.FACEBOOK_APP_ID,
@@ -153,7 +146,25 @@ class Login(BaseHandler):
 
         facebok_login_url = "https://graph.facebook.com/oauth/authorize?" + \
             urllib.urlencode(args)
-        body += '<p><a href="%s">facebook</a></p>' % facebok_login_url
+        self.redirect(facebok_login_url)
+
+
+class Login(BaseHandler):
+    def get(self):
+        #
+        # OpenID, OAuth
+        #
+        body = '<p><a href="%s">google</a></p>' % \
+        users.create_login_url(
+            federated_identity="www.google.com/accounts/o8/id") + \
+            '<p><a href="%s">mixi</a></p>' % \
+        users.create_login_url(federated_identity="mixi.jp") + \
+        '<p><a href="%s">biglobe</a></p>' % \
+        users.create_login_url(federated_identity="openid.biglobe.ne.jp") + \
+        '<p><a href="%s">yahoo</a></p>' % \
+        users.create_login_url(federated_identity="yahoo.co.jp") + \
+        '<p><a href="/pretwlogin">twitter</a></p>' + \
+        '<p><a href="/prefblogin">facebook</a></p>'
 
         render_template_and_write_in_sjis(self, "login.tmpl", body)
 
