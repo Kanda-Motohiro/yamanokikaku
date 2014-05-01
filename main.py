@@ -17,8 +17,7 @@ import random
 from google.appengine.ext import db
 import webapp2
 from util import *
-#from util import date2Tukihi,shimekiriNashi,date2Tukihi,logerror,err, \
-#render_template_and_write_in_sjis,dbgprint,renderKaiinTemplate,
+from session import *
 import model
 import login
 from login import getKikakuAndKaiin, getKikaku, getCurrentUserId, \
@@ -153,7 +152,8 @@ class Detail(BaseHandler):
 
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
             u"リーダー：%s " % ",".join(rec.leaders) + \
-            u"メンバー：%s " % ",".join(memberLinks) + \
+            u"メンバー：%s " % ",".join(memberLinks) + "<br>\n" + \
+            "<br>\n".join(rec.details()) + "<br>\n" + \
             "<br>\n" + moushikomi + "<br>\n" + \
             u"""<br><a href="/shimekiri?key=%s">応募者名簿を表示する</a>。
             デモのため、事務局以外の一般会員からも操作できるようにしています。""" % rec.key()
@@ -343,6 +343,61 @@ class KaiinTouroku(BaseHandler):
         self.redirect("/")
 
 
+class KikakuNew(BaseHandler):
+    "フォームから、山行企画を１件、入れる。"
+    def get(self):
+        kaiin = getKaiin(self)
+        if kaiin is None:
+            err(self, "only our member can do that.")
+            return
+        rec = model.blankKikaku
+        renderKikakuTemplate(self, rec)
+
+    def post(self):
+        kaiin = getKaiin(self)
+        if kaiin is None:
+            return
+        self.request.charset = "cp932"
+        kwds = dict()
+        for key in ("title", "rank", "chizu", "course", "memo",
+            "start", "end", "shimekiri",
+            "no", "teiin"):
+            val = self.request.get(key)
+
+            if val == "" or val is None or val == "None":
+                continue
+
+            # TODO parsecsv.py と共通関数にして。
+            #dbgprint("%s=%s" % (key, val))
+            # 文字列はエスケープする
+            if key in ("title", "rank", "chizu", "course", "memo"):
+                val = cgi.escape(val, quote=True)
+            # 日本語の日付は datetime にする。
+            elif key in ("start", "end", "shimekiri"):
+                val = tukihi2Date(val)
+            # これは整数。
+            elif key in ("no", "teiin"):
+                try:
+                    val = int(val)
+                except ValueError:
+                    dbgprint("invalid %s" % val)
+                    continue
+            else:
+                dbgprint("unknown key %s" % key)
+                continue
+
+            kwds[key] = val
+        # end for key
+
+        # フォーム登録した時は、番号が決まってない。とりあえず、全部ゼロ。
+        if "no" not in kwds or kwds["no"] is None:
+            kwds["no"] = 0
+
+        rec = model.Kikaku(**kwds)
+        rec.put()
+        self.redirect("/")
+
+
 class KaiinSakujo(BaseHandler):
     def get(self):
         "自分の登録情報を忘れさせる。"
@@ -376,7 +431,9 @@ class MainPage(BaseHandler):
 番号をクリックして下さい。<br>
 <a href="/kaiin">会員情報</a>&nbsp;
 <a href="/sankourireki?no=%d">最近行った山</a>&nbsp;
-<a href="%s">ログアウト</a>。""" % \
+<a href="/kikakunew">山行企画を入力する</a>&nbsp;
+<a href="%s">ログアウト</a>&nbsp
+""" % \
                 (kaiin.displayName(), kaiin.no,
                     getLogoutUrl(self))
 
@@ -408,6 +465,8 @@ def SankouKikakuIchiran(kaiin, table=False):
 
     kikakuList = []
     for rec in query:
+        if rec.no is None:
+            rec.no = 0
         if kaiin:
             no = '<a href="/detail?key=%s">%d</a> ' % (rec.key(), rec.no)
         else:
@@ -486,6 +545,7 @@ app = webapp2.WSGIApplication([
     ("/kaiin", KaiinTouroku),
     ("/unsubscribe", KaiinSakujo),
     ("/sankourireki", SankouRireki),
+    ("/kikakunew", KikakuNew),
     ("/debug", Debug),
     ("/apply", Apply),
     ("/cancel", Cancel)

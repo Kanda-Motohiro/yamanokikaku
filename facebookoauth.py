@@ -32,13 +32,14 @@ in client-side code.
 import cgi
 import urllib
 from django.utils import simplejson as json
-from util import BaseHandler, dbgprint, err
+from util import dbgprint, err
 import model
+import session
 
 FACEBOOK_APP_ID = "262276473906025"
 
 
-class FbLogin(BaseHandler):
+class FbLogin(session.BaseHandler):
     def get(self):
         # http://developers.facebook.com/docs/howtos/login/server-side-login/
         # に、こうせよと書いてあるけど。

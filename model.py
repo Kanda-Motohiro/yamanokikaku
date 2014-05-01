@@ -4,21 +4,26 @@
 # Copyright (c) 2008, 2013 Kanda.Motohiro@gmail.com
 # Licensed under the Apache License, Version 2.0
 
+import datetime
 from google.appengine.ext import db
 from util import date2Tukihi, shimekiriNashi, dbgprint
 
 
 class Kikaku(db.Model):
     "山行企画"
-    no = db.IntegerProperty(required=True)  # No. 243
+    no = db.IntegerProperty()  # No. 243
     title = db.StringProperty(required=True)  # 薬師岳、雲の平
     rank = db.StringProperty()  # C-C-8.5
     start = db.DateProperty(required=True)  # 8/8
     end = db.DateProperty()  # 8/12
-    shimekiri = db.DateProperty(required=True)  # 締切日 6/24
+    shimekiri = db.DateProperty()  # 締切日 6/24
     teiin = db.IntegerProperty()  # 定員　１０人
     leaders = db.StringListProperty()  # リーダー　大友、三浦
     members = db.StringListProperty()
+
+    chizu = db.StringProperty()  # 昭文社　槍ヶ岳
+    course = db.StringProperty()  # 有峰から薬師小屋 4:00
+    memo = db.StringProperty()  # 8:01 あずさ１号乗車
 
     def __cmp__(self, other):
         # start でソートする
@@ -33,16 +38,22 @@ class Kikaku(db.Model):
 
         return u"リーダー:%s メンバー:%s" % (leaders, members)
 
+    def details(self):
+        " repr に入りきらない詳細をリストで返す。 "
+        if not self.course:
+            return ()
+        return (u"コース:%s" % self.course, u"MEMO:%s" % self.memo)
+
     def teiinStr(self):
         # 定員、なし。いくらでも受付可能というのは、イレギュラーなので注意。
-        if self.teiin == 0:
+        if self.teiin == 0 or self.teiin is None:
             return u"なし"
         else:
             return u"%d人" % self.teiin
 
     def kijitu(self):
         "日本語で示した、開始日と終了日"
-        if self.start == self.end:
+        if self.start == self.end or self.end is None:
             end = ""
         else:
             end = u"-" + date2Tukihi(self.end)
@@ -51,17 +62,21 @@ class Kikaku(db.Model):
 
     def shimekiribi(self):
         # 締切日。指定なし、というのもある。
-        if self.shimekiri == shimekiriNashi:
+        if self.shimekiri == shimekiriNashi or self.shimekiri is None:
             return u"なし"
         else:
             return date2Tukihi(self.shimekiri)
 
     def __repr__(self):
         # no は、リンクにするので、ここでは返さない。
+        # 表形式の時など、ブラウザ画面の１行に収まる必要がある。
         return u"%s %s 期日:%s 締切日:%s 定員:%s 現在:%d人" % \
            (self.title, self.rank, self.kijitu(),
            self.shimekiribi(), self.teiinStr(), len(self.members))
 
+
+blankKikaku = Kikaku(no=0, title=u"山行名を入れて下さい",
+    start=datetime.date.today())
 
 class Kaiin(db.Model):
     """山岳会の会員
