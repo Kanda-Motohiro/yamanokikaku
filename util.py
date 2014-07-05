@@ -2,14 +2,6 @@
 # encoding=utf-8
 # util.py
 # Copyright (c) 2012, 2012 Kanda.Motohiro@gmail.com
-"""
->>> tukihi2Date(u"1970年1月1日")
-datetime.date(1970, 1, 1)
->>> tukihi2Date(u"1月15日")
-datetime.date(2012, 1, 15)
->>> print date2Tukihi(datetime.date(2000, 3, 5))
-3月5日
-"""
 import re
 import os
 import datetime
@@ -28,6 +20,19 @@ shimekiriNashi = datetime.date.max
 # 日本語の月日と、 datetime 型の変換
 #
 def date2Tukihi(d):
+    u"""
+    これをやると、
+    date2Tukihi(datetime.date(2000, 3, 5))
+    u'2000\u5e743\u67085\u65e5'
+    こうなって、doctest が通らない。コメントの中のユニコードの結果って
+    どうやって書くの？
+    Failed example:
+        date2Tukihi(datetime.date(2000, 3, 5))
+    Expected:
+        u'2000年3月5日'
+    Got:
+        u'2000\u5e743\u67085\u65e5'
+    """
     year = datetime.date.today().year
     if year == d.year:
         return u"%d月%d日" % (d.month, d.day)
@@ -37,15 +42,70 @@ def date2Tukihi(d):
 
 
 def tukihi2Date(s, today=None):
+    u"""
+    >>> today = datetime.date(2012, 8, 17)
+    >>> tukihi2Date("2014/5/6")
+    datetime.date(2014, 5, 6)
+    >>> tukihi2Date("2014 12 31")
+    datetime.date(2014, 12, 31)
+    >>> tukihi2Date("3/15", today)
+    datetime.date(2012, 3, 15)
+    >>> tukihi2Date("1 30", today)
+    datetime.date(2012, 1, 30)
+
+
+    >>> tukihi2Date(u"1970年1月1日")
+    datetime.date(1970, 1, 1)
+    >>> tukihi2Date(u"1月15日", today)
+    datetime.date(2012, 1, 15)
+    >>> tukihi2Date(u"1970年1月1日")
+    datetime.date(1970, 1, 1)
+    >>> tukihi2Date(u"3/7", today)
+    datetime.date(2012, 3, 7)
+    >>> tukihi2Date("3/7", today)
+    datetime.date(2012, 3, 7)
+    >>> tukihi2Date(u"２０１２年５月4日")
+    datetime.date(2012, 5, 4)
+    >>> tukihi2Kikan(u"1日", today)
+    (datetime.date(2012, 8, 1), datetime.date(2012, 8, 1))
+    >>> tukihi2Kikan(u"7日（金）～9日（日）", today)
+    (datetime.date(2012, 8, 7), datetime.date(2012, 8, 9))
+
+    """
+    dbgprint(s)
+    if s is None or s == "" or s == u"なし":
+        return None
     if today:
         year = today.year
         month = today.month
     else:
         year = datetime.date.today().year
 
+    # fmt マッチさせるために、前後の空白を除く
+    s = s.strip()
+
     # 全角数字を変換 http://www.nekonomics.jp/2010/12/intunicodedata.html
     if isinstance(s, unicode):
         s = unicodedata.normalize("NFKC", s)
+
+    # 簡単なものを、いくつか試す。
+    out = None
+    for fmt in "%Y/%m/%d", "%Y %m %d", "%Y-%m-%d", "%m/%d", "%m %d", "%m-%d", \
+        "%b. %d, %Y", "%b %d, %Y", "%B. %d, %Y", "%B %d, %Y":
+        #print fmt, s
+        try:
+            out = datetime.datetime.strptime(s, fmt)
+        except ValueError, e:
+            pass
+        else:
+            if out is not None:
+                break
+    # end for fmt
+
+    if out is not None:
+        if out.year == 1900:
+            return datetime.date(year, out.month, out.day)
+        return datetime.date(out.year, out.month, out.day)
 
     # 3/7 は、３月７日
     m = re.search("(\d{1,2})/(\d{1,2})", s)
@@ -55,22 +115,27 @@ def tukihi2Date(s, today=None):
         return datetime.date(year, month, day)
 
     m = re.search(u"(\d+)年", s)
-    if m:
+    if m is not None:
         year = int(m.group(1))
 
     m = re.search(u"(\d+)月", s)
-    if m:
-        month = int(m.group(1))
+    if m is None:
+        dbgprint("cannot parse month. " + s)
+        return None
+    month = int(m.group(1))
     m = re.search(u"(\d+)日", s)
     if m:
         day = int(m.group(1))
     else:
         # 22（土・祝）
         m = re.search(u"(\d+)", s)
+        if m is None:
+            dbgprint("cannot parse day. " + s)
+            return None
         day = int(m.group(1))
 
-    d = datetime.date(year, month, day)
-    return d
+    out = datetime.date(year, month, day)
+    return out
 
 
 def tukihi2Kikan(s, today=None):
@@ -127,8 +192,9 @@ def err(handler, message):
 
 
 def _test():
+    verbose = False
     import doctest
-    doctest.testmod(verbose=True)
+    doctest.testmod(verbose=verbose)
 
 
 def dbgprinttest():
@@ -138,17 +204,22 @@ def dbgprinttest():
 
 
 def datetest():
-    today = datetime.date(2012, 8, 17)
+    import sys
+    today = datetime.date.today()
+    if len(sys.argv) == 2:
+        print tukihi2Date(sys.argv[1])
+    else:
+        print date2Tukihi(today)
+        _test()
+    """
     print tukihi2Date(u"1970年1月1日")
-    print date2Tukihi(today)
     print tukihi2Date(u"3/7", today)
     print tukihi2Date("3/7", today)
     print tukihi2Date(u"２０１２年５月4日")
-
     print tukihi2Kikan(u"1日", today)
     print tukihi2Kikan(u"7日（金）～9日（日）", today)
+    """
 
 if __name__ == "__main__":
     datetest()
-    #_test()
 # eof

@@ -32,6 +32,7 @@ config = {"webapp2_extras.sessions":
 { "secret_key": a.hexdigest(),
 "cookie_args": {"secure":False, "httponly":True} }}
 
+demoMode = False
 
 #
 # handlers
@@ -156,7 +157,9 @@ class Detail(BaseHandler):
             "<br>\n".join(rec.details()) + "<br>\n" + \
             "<br>\n" + moushikomi + "<br>\n" + \
             u"""<br><a href="/shimekiri?key=%s">応募者名簿を表示する</a>。
-            デモのため、事務局以外の一般会員からも操作できるようにしています。""" % rec.key()
+            デモのため、事務局以外の一般会員からも操作できるようにしています。<br>
+            <br><a href="/kikaku?key=%s">編集する</a>""" % \
+                (rec.key(), rec.key())
 
         render_template_and_write_in_sjis(self, "blank.tmpl", body)
         return
@@ -343,24 +346,33 @@ class KaiinTouroku(BaseHandler):
         self.redirect("/")
 
 
-class KikakuNew(BaseHandler):
+class KikakuTouroku(BaseHandler):
     "フォームから、山行企画を１件、入れる。"
     def get(self):
         kaiin = getKaiin(self)
         if kaiin is None:
             err(self, "only our member can do that.")
             return
-        rec = model.blankKikaku
+
+        # キーの指定がなければ、新しい企画を作成。
+        key = self.request.get("key")
+        if not key:
+            rec = model.blankKikaku
+        # あれば、そのレコードを編集。
+        else:
+            rec = getKikaku(self)
+
         renderKikakuTemplate(self, rec)
 
     def post(self):
         kaiin = getKaiin(self)
         if kaiin is None:
+            err(self, "no kaiin at post")
             return
         self.request.charset = "cp932"
         kwds = dict()
         for key in ("title", "rank", "chizu", "course", "memo",
-            "start", "end", "shimekiri",
+            "start", "end", "shimekiri", "syuugou", "leaders",
             "no", "teiin"):
             val = self.request.get(key)
 
@@ -370,7 +382,8 @@ class KikakuNew(BaseHandler):
             # TODO parsecsv.py と共通関数にして。
             #dbgprint("%s=%s" % (key, val))
             # 文字列はエスケープする
-            if key in ("title", "rank", "chizu", "course", "memo"):
+            if key in ("title", "rank", "chizu", "course", "memo",\
+                "syuugou", "leaders"):
                 val = cgi.escape(val, quote=True)
             # 日本語の日付は datetime にする。
             elif key in ("start", "end", "shimekiri"):
@@ -392,6 +405,14 @@ class KikakuNew(BaseHandler):
         # フォーム登録した時は、番号が決まってない。とりあえず、全部ゼロ。
         if "no" not in kwds or kwds["no"] is None:
             kwds["no"] = 0
+        # このフィールドは何かしら入ってないと、比較して面倒。当日にする。
+        if "shimekiri" not in kwds or kwds["shimekiri"] is None:
+            kwds["shimekiri"] = kwds["start"]
+        # 指定がなければ、登録した人
+        if "leaders" not in kwds or kwds["leaders"] is []:
+            kwds["leaders"] = [kaiin.name,]
+        elif not isinstance(kwds["leaders"], list):
+            kwds["leaders"] = [kwds["leaders"],]
 
         rec = model.Kikaku(**kwds)
         rec.put()
@@ -431,7 +452,7 @@ class MainPage(BaseHandler):
 番号をクリックして下さい。<br>
 <a href="/kaiin">会員情報</a>&nbsp;
 <a href="/sankourireki?no=%d">最近行った山</a>&nbsp;
-<a href="/kikakunew">山行企画を入力する</a>&nbsp;
+<a href="/kikaku">山行企画を入力する</a>&nbsp;
 <a href="%s">ログアウト</a>&nbsp
 """ % \
                 (kaiin.displayName(), kaiin.no,
@@ -457,14 +478,16 @@ def SankouKikakuIchiran(kaiin, table=False):
     y = datetime.date.today().year
     m = datetime.date.today().month
     start = datetime.date(y, m, 1)
-    # だけど、デモなので、しばらくはこうする。
-    start = datetime.date(2012, 6, 1)
+    if demoMode:
+        # デモならこうする。
+        start = datetime.date(2012, 6, 1)
 
     query = db.GqlQuery("SELECT * FROM Kikaku WHERE start >= :1 \
                 ORDER BY start ASC", start)
 
     kikakuList = []
     for rec in query:
+        #dbgprint("rec %s" % rec)
         if rec.no is None:
             rec.no = 0
         if kaiin:
@@ -545,7 +568,7 @@ app = webapp2.WSGIApplication([
     ("/kaiin", KaiinTouroku),
     ("/unsubscribe", KaiinSakujo),
     ("/sankourireki", SankouRireki),
-    ("/kikakunew", KikakuNew),
+    ("/kikaku", KikakuTouroku),
     ("/debug", Debug),
     ("/apply", Apply),
     ("/cancel", Cancel)

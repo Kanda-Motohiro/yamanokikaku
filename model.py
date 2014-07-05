@@ -14,16 +14,17 @@ class Kikaku(db.Model):
     no = db.IntegerProperty()  # No. 243
     title = db.StringProperty(required=True)  # 薬師岳、雲の平
     rank = db.StringProperty()  # C-C-8.5
-    start = db.DateProperty(required=True)  # 8/8
+    start = db.DateProperty()  # 8/8
     end = db.DateProperty()  # 8/12
     shimekiri = db.DateProperty()  # 締切日 6/24
+    syuugou = db.StringProperty()  # 集合 八王子駅中央線ホーム7:00
     teiin = db.IntegerProperty()  # 定員　１０人
     leaders = db.StringListProperty()  # リーダー　大友、三浦
     members = db.StringListProperty()
 
     chizu = db.StringProperty()  # 昭文社　槍ヶ岳
-    course = db.StringProperty()  # 有峰から薬師小屋 4:00
-    memo = db.StringProperty()  # 8:01 あずさ１号乗車
+    course = db.StringProperty(multiline=True)  # 有峰から薬師小屋 4:00
+    memo = db.StringProperty(multiline=True)  # 8:01 あずさ１号乗車
 
     def __cmp__(self, other):
         # start でソートする
@@ -60,6 +61,23 @@ class Kikaku(db.Model):
 
         return date2Tukihi(self.start) + end
 
+    def kaishi(self):
+        """この２つは、django template で、start, end を表示すると、
+        post でそれを拾った時に、datetime.strptime でパースできない
+        形式になることの対策。９月が、Sept. になる。誰がこれ決めてるの？
+        テンプレートで、関数って、呼べるんだっけ。
+        この関数を作って、日本語表示したらそれなりに動いた。
+        単純に 2014/7/15 とかの文字列を返させてもよかったかも。
+        """
+        if self.start is None:
+            return None
+        return date2Tukihi(self.start)
+
+    def syuuryou(self):
+        if self.end is None:
+            return None
+        return date2Tukihi(self.end)
+
     def shimekiribi(self):
         # 締切日。指定なし、というのもある。
         if self.shimekiri == shimekiriNashi or self.shimekiri is None:
@@ -76,7 +94,7 @@ class Kikaku(db.Model):
 
 
 blankKikaku = Kikaku(no=0, title=u"山行名を入れて下さい",
-    start=datetime.date.today())
+    start=datetime.date.today(), leaders = [], members= [])
 
 class Kaiin(db.Model):
     """山岳会の会員
