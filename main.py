@@ -54,6 +54,10 @@ class Apply(BaseHandler):
         # この会員が、現在申し込んでいるものと、期日が重複してはいけない。
         for key in user.kikakuList:
             other = db.get(key)
+            if other and other.start and other.end and rec.start and rec.end:
+                pass
+            else:
+                continue
             if other.start <= rec.start <= other.end or \
                 other.start <= rec.end <= other.end:
 
@@ -121,7 +125,8 @@ class KikakuSakujo(BaseHandler):
             err(self, "invalid user/key")
             return
 
-        if not users.is_current_user_admin() and rec.creator != user:
+        if (not users.is_current_user_admin()) and \
+            rec.creator.key() != user.key():
             err(self, "cannot delete kikaku")
             return
 
@@ -168,10 +173,12 @@ class Detail(BaseHandler):
                 (no, no, name))
 
         # 管理者と、この企画を登録した会員は、削除のリンクを表示する。
-        if users.is_current_user_admin() or rec.creator == user:
-            sakujo = u'<br><a href="/kikakusakujo?key=%s">削除する</a>' % rec.key()
+        if users.is_current_user_admin() or rec.creator.key() == user.key():
+            editLink = u"""<br><a href="/kikaku?key=%s">編集する</a>
+            <br><a href="/kikakusakujo?key=%s">削除する</a>""" % \
+            (rec.key(), rec.key())
         else:
-            sakujo = ""
+            editLink = ""
 
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
             u"リーダー：%s " % rec.leaders() + \
@@ -179,9 +186,9 @@ class Detail(BaseHandler):
             "<br>\n".join(rec.details()) + "<br>\n" + \
             "<br>\n" + moushikomi + "<br>\n" + \
             u"""<br><a href="/shimekiri?key=%s">応募者名簿を表示する</a>。
-            デモのため、事務局以外の一般会員からも操作できるようにしています。<br>
-            <br><a href="/kikaku?key=%s">編集する</a>""" % \
-                (rec.key(), rec.key()) + sakujo
+            デモのため、事務局以外の一般会員からも操作できるようにしています。
+            <br>""" % rec.key() + \
+            editLink
 
         render_template_and_write_in_sjis(self, "blank.tmpl", body)
         return
@@ -384,12 +391,11 @@ class KikakuTouroku(BaseHandler):
         else:
             rec = getKikaku(self)
 
-        renderKikakuTemplate(self, rec)
+        # key は、フォームの hidden フィールドに入れて、post に与える
+        renderKikakuTemplate(self, rec, key)
 
     def post(self):
         """
-        FIXME フォームに、キーを入れて、既にあるレコードの更新なら、
-        put  の後で、削除すること。
         """
         kaiin = getKaiin(self)
         if kaiin is None:
@@ -428,6 +434,11 @@ class KikakuTouroku(BaseHandler):
             kwds[key] = val
         # end for key
 
+        # 必要なものが入ってないフォーム？
+        if "start" not in kwds or "title" not in kwds:
+            err(self, "no start/title in form")
+            return
+
         # フォーム登録した時は、番号が決まってない。とりあえず、全部ゼロ。
         if "no" not in kwds or kwds["no"] is None:
             kwds["no"] = 0
@@ -439,8 +450,14 @@ class KikakuTouroku(BaseHandler):
             kwds["CL"] = kaiin.name
 
         rec = model.Kikaku(**kwds)
-        rec.creator = kaiin.key()
+        rec.creator = kaiin
         rec.put()
+
+        # 古いレコードがあれば、削除。
+        old = getKikaku(self)
+        if old:
+            db.delete(old)
+
         self.redirect("/")
 
 

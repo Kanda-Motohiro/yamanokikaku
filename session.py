@@ -45,10 +45,10 @@ def renderKaiinTemplate(handler, logout, kaiin):
     return
 
 
-def renderKikakuTemplate(handler, kikaku):
+def renderKikakuTemplate(handler, kikaku, key):
     handler.response.headers["Content-Type"] = "text/html; charset=cp932"
     t = loader.get_template("kikaku.tmpl")
-    uni = t.render(Context({"kikaku": kikaku}))
+    uni = t.render(Context({"kikaku": kikaku, "key": key}))
     handler.response.out.write(uni.encode("cp932", "replace"))
     return
 

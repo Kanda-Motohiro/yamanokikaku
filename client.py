@@ -61,6 +61,9 @@ def doit(op):
     printOrRaise(f, 20)
 
 mainActions = [ "", "login", "table", "kaiin",
+"kikaku", "kikaku?key=no-such-key", "kikaku?key=KEY",
+"kikakusakujo", "kikakusakujo?key=no-such-key", "kikakusakujo?key=KEY",
+
 "sankourireki", "sankourireki?no=no-such-key", "sankourireki?no=99999999",
 "sankourireki?no=9000", # no=9000 はある。
 "shimekiri", "shimekiri?key=no-such-key", "shimekiri?key=KEY",
@@ -103,6 +106,29 @@ tabeiFullRecord
         f = urllib2.urlopen(request)
         printOrRaise(f, 20)
 
+kikakuFullRecord = { "no":"300",
+"title":u"槍ヶ岳".encode("cp932"), "rank":"B-B-5.0",
+"start":"8/10", "end":"8/16", "shimekiri":"7/10",
+"syuugou":u"八王子駅中央線 7:30".encode("cp932"),
+"CL":u"田部井".encode("cp932"), "SL":u"平山".encode("cp932"),
+"course":u"上高地から横尾\n横尾から槍ヶ岳山荘\n往路を帰る".encode("cp932"),
+"memo":u"あずさ１号".encode("cp932"),
+}
+
+def doKikakuPost():
+    for form in (kikakuFullRecord,
+ {"invalid-key":"hello"}, {"no":"200", "title":"Yarigatake", "start":"9/20"},
+ {"no":"201", "title":"Oze", "start":"2014/12/30", "end":"2015/1/5"},
+ {"no":"202", "title":u"尾瀬".encode("cp932"), "start":u"８月１５日".encode("cp932")},
+ {"no":"203", "title":u"尾瀬".encode("utf-8"), "start":"9/21"},
+ ):
+        print "\n#### " + str(form)[:64] + " ####\n"
+
+        param = urllib.urlencode(form)
+        request = urllib2.Request(host + "kikaku", param, headers)
+        f = urllib2.urlopen(request)
+        printOrRaise(f, 20)
+
 def postAFile(urlpath, filename):
     " from http://atlee.ca/software/poster/ "
     print "\n#### " + urlpath + " " + filename + " ####\n"
@@ -132,17 +158,25 @@ def main():
             doit(op)
         sys.exit(0)
         
-    # 普通の操作一覧
+    # start
     fetchAValidKey()
+    # insert new cases here.
+    #login()
+    #doKikakuPost()
+    #logout()
+    #sys.exit(0)
+    # 普通の操作一覧
     for action in mainActions:
         doit(action)
     doKaiinPost()
+    doKikakuPost()
     # login してからもう一度
     print "\n#### LOGGED IN ####\n"
     login()
     for action in mainActions:
         doit(action)
     doKaiinPost()
+    doKikakuPost()
     logout()
     
 if __name__ == "__main__":
