@@ -33,6 +33,8 @@ def date2Tukihi(d):
     Got:
         u'2000\u5e743\u67085\u65e5'
     """
+    if d is None:
+        return ""
     year = datetime.date.today().year
     if year == d.year:
         return u"%d月%d日" % (d.month, d.day)

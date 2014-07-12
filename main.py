@@ -15,6 +15,7 @@ import cgi
 import hashlib
 import random
 from google.appengine.ext import db
+from google.appengine.api import users
 import webapp2
 from util import *
 from session import *
@@ -113,6 +114,21 @@ class Cancel(BaseHandler):
         self.redirect("/detail?key=%s" % rec.key())
 
 
+class KikakuSakujo(BaseHandler):
+    def get(self):
+        rec, user = getKikakuAndKaiin(self)
+        if rec is None:
+            err(self, "invalid user/key")
+            return
+
+        if not users.is_current_user_admin() and rec.creator != user:
+            err(self, "cannot delete kikaku")
+            return
+
+        db.delete(rec)
+        self.redirect("/")
+
+
 class Detail(BaseHandler):
     def get(self):
         """key= で与えられた、１つの山行企画を表示し、
@@ -151,15 +167,21 @@ class Detail(BaseHandler):
             memberLinks.append(u'<a href="/sankourireki?no=%d">%d</a> %s' %
                 (no, no, name))
 
+        # 管理者と、この企画を登録した会員は、削除のリンクを表示する。
+        if users.is_current_user_admin() or rec.creator == user:
+            sakujo = u'<br><a href="/kikakusakujo?key=%s">削除する</a>' % rec.key()
+        else:
+            sakujo = ""
+
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
-            u"リーダー：%s " % ",".join(rec.leaders) + \
+            u"リーダー：%s " % rec.leaders() + \
             u"メンバー：%s " % ",".join(memberLinks) + "<br>\n" + \
             "<br>\n".join(rec.details()) + "<br>\n" + \
             "<br>\n" + moushikomi + "<br>\n" + \
             u"""<br><a href="/shimekiri?key=%s">応募者名簿を表示する</a>。
             デモのため、事務局以外の一般会員からも操作できるようにしています。<br>
             <br><a href="/kikaku?key=%s">編集する</a>""" % \
-                (rec.key(), rec.key())
+                (rec.key(), rec.key()) + sakujo
 
         render_template_and_write_in_sjis(self, "blank.tmpl", body)
         return
@@ -216,7 +238,7 @@ class Shimekiri(webapp2.RequestHandler):
             return
 
         body = "No. %d " % rec.no + unicode(rec) + "<br>\n" + \
-            u"リーダー：" + ",".join(rec.leaders) + "<hr>"
+            u"リーダー：" + rec.leaders() + "<hr>"
 
         kaiinList = []
         # すべての応募者の、緊急連絡先を含む、応募者名簿を表示する。
@@ -365,6 +387,10 @@ class KikakuTouroku(BaseHandler):
         renderKikakuTemplate(self, rec)
 
     def post(self):
+        """
+        FIXME フォームに、キーを入れて、既にあるレコードの更新なら、
+        put  の後で、削除すること。
+        """
         kaiin = getKaiin(self)
         if kaiin is None:
             err(self, "no kaiin at post")
@@ -372,7 +398,7 @@ class KikakuTouroku(BaseHandler):
         self.request.charset = "cp932"
         kwds = dict()
         for key in ("title", "rank", "chizu", "course", "memo",
-            "start", "end", "shimekiri", "syuugou", "leaders",
+            "start", "end", "shimekiri", "syuugou", "CL", "SL",
             "no", "teiin"):
             val = self.request.get(key)
 
@@ -383,7 +409,7 @@ class KikakuTouroku(BaseHandler):
             #dbgprint("%s=%s" % (key, val))
             # 文字列はエスケープする
             if key in ("title", "rank", "chizu", "course", "memo",\
-                "syuugou", "leaders"):
+                "syuugou", "CL", "SL"):
                 val = cgi.escape(val, quote=True)
             # 日本語の日付は datetime にする。
             elif key in ("start", "end", "shimekiri"):
@@ -409,12 +435,11 @@ class KikakuTouroku(BaseHandler):
         if "shimekiri" not in kwds or kwds["shimekiri"] is None:
             kwds["shimekiri"] = kwds["start"]
         # 指定がなければ、登録した人
-        if "leaders" not in kwds or kwds["leaders"] is []:
-            kwds["leaders"] = [kaiin.name,]
-        elif not isinstance(kwds["leaders"], list):
-            kwds["leaders"] = [kwds["leaders"],]
+        if "CL" not in kwds or not kwds["CL"]:
+            kwds["CL"] = kaiin.name
 
         rec = model.Kikaku(**kwds)
+        rec.creator = kaiin.key()
         rec.put()
         self.redirect("/")
 
@@ -517,7 +542,7 @@ def SankouKikakuIchiran(kaiin, table=False):
 
                 kikaku += u'<tr><td colspan="7">\
                     リーダー:%s | メンバー:%s</td></tr>' % \
-                    (",".join(rec.leaders), members)
+                    (rec.leaders(), members)
 
         kikakuList.append(kikaku)
 
@@ -569,6 +594,7 @@ app = webapp2.WSGIApplication([
     ("/unsubscribe", KaiinSakujo),
     ("/sankourireki", SankouRireki),
     ("/kikaku", KikakuTouroku),
+    ("/kikakusakujo", KikakuSakujo),
     ("/debug", Debug),
     ("/apply", Apply),
     ("/cancel", Cancel)

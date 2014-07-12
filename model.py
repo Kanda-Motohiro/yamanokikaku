@@ -19,8 +19,10 @@ class Kikaku(db.Model):
     shimekiri = db.DateProperty()  # 締切日 6/24
     syuugou = db.StringProperty()  # 集合 八王子駅中央線ホーム7:00
     teiin = db.IntegerProperty()  # 定員　１０人
-    leaders = db.StringListProperty()  # リーダー　大友、三浦
+    CL = db.StringProperty()  # チーフリーダー　大友
+    SL = db.StringProperty()  # サブリーダー　三浦　
     members = db.StringListProperty()
+    creator = db.ReferenceProperty() # このレコードを入れた会員のキー
 
     chizu = db.StringProperty()  # 昭文社　槍ヶ岳
     course = db.StringProperty(multiline=True)  # 有峰から薬師小屋 4:00
@@ -30,14 +32,18 @@ class Kikaku(db.Model):
         # start でソートする
         return cmp(self.start, other.start)
 
+    def leaders(self):
+        """複数のサブリーダーというのもあるから、できるだけ、ここだけ
+        なおせばいいように。"""
+        return "%s,%s" % (self.CL, self.SL)
+
     def leadersMembers(self):
-        leaders = ",".join(self.leaders)
         if 0 < len(self.members):
             members = ",".join(self.members)
         else:
             members = u""
 
-        return u"リーダー:%s メンバー:%s" % (leaders, members)
+        return u"リーダー:%s メンバー:%s" % (self.leaders(), members)
 
     def details(self):
         " repr に入りきらない詳細をリストで返す。 "
@@ -94,7 +100,7 @@ class Kikaku(db.Model):
 
 
 blankKikaku = Kikaku(no=0, title=u"山行名を入れて下さい",
-    start=datetime.date.today(), leaders = [], members= [])
+    start=datetime.date.today(), members= [])
 
 class Kaiin(db.Model):
     """山岳会の会員

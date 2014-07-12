@@ -77,6 +77,8 @@ def parseSankouKikakuCsvFile(buf):
         title = els[2].replace("*", "")
         rank = els[3]
         leaders = els[4].split(u"、")
+        CL = leaders[0]
+        SL = leaders[1]
 
         # 募集終了というのは、締め切りがない
         if els[5] == u"" or els[5] == u"済":
@@ -95,7 +97,7 @@ def parseSankouKikakuCsvFile(buf):
             teiin = 0
 
         # 整数、文字列、datetime.date など
-        kikaku = (no, title, rank, start, end, shimekiri, teiin, leaders)
+        kikaku = (no, title, rank, start, end, shimekiri, teiin, CL, SL)
         out.append(kikaku)
 
     return out, ignored

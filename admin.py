@@ -8,6 +8,7 @@ from google.appengine.ext import db
 from model import Kikaku, Kaiin, Config, loadConfig
 import parsecsv
 from util import *
+from session import render_template_and_write_in_sjis
 
 
 class KaiinTouroku(webapp2.RequestHandler):
@@ -108,13 +109,13 @@ class InitLoad(webapp2.RequestHandler):
         rec = Kikaku(no=243, title=u"薬師岳、雲の平", rank="C-C-8.5",
             start=tukihi2Date(u"8月8日"), end=tukihi2Date(u"8月12日"),
             shimekiri=tukihi2Date(u"6月24日"), teiin=10,
-            leaders=[u"大友", u"三浦"])
+            CL=u"大友", SL=u"三浦")
         rec.put()
 
         rec = Kikaku(no=245, title=u"御岳山滝巡り", rank="A-B-3.5",
             start=tukihi2Date(u"7月1日"), end=tukihi2Date(u"7月1日"),
             shimekiri=tukihi2Date(u"6月28日"), teiin=0,
-            leaders=[u"田辺", u"居関"])
+            CL=u"田辺", SL=u"居関")
         rec.put()
 
         rec = Kaiin(no=9002, name=u"平山ユージ", openid="test@example.com")
