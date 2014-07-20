@@ -122,7 +122,7 @@ class PreTwLogin(BaseHandler):
                                             auth.request_token.secret)
 
         except tweepy.TweepError, e:
-            err(e)
+            err(self, str(e))
             return
         self.redirect(tw_redirect_url)
 

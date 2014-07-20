@@ -7,13 +7,7 @@ coding=utf-8
 {% block content %}
 必要事項を入力して、「登録」ボタンを押して下さい。
 <p><form action="/kikaku" method="post" enctype="multipart/form-data"></p>
-<!-- これは、自動で入れられる
-<p>提出者会員番号 <input type="text" name="no" size="8" value="{{kikaku.no}}"></p>
-<p>氏名 <input type="text" name="name" size="20" value="{{kikaku.name}}"></p>
--->
-
-<p>No. <input type="text" name="no" size="6" value="{{kikaku.no}}" readonly>
-番号は編集できません。</p>
+<p>No. <input type="text" name="no" size="6" value="{{kikaku.no}}"> </p>
 <p>山行名 <input type="text" name="title" size="30" value="{{kikaku.title}}"> </p>
 
 <p>ランク （例 B-B-6.0）<input type="text" name="rank" size="8" value="{{kikaku.rank}}"></p>
