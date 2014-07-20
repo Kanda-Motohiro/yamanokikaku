@@ -370,8 +370,9 @@ class KaiinTouroku(BaseHandler):
             rec = model.Kaiin(no=f["no"], name=f["name"], openid=openid)
             dbgprint("new kaiin no %d name %s" % (f["no"], f["name"]))
 
-        rec.updateFromDict(f)
-        rec.put()
+        mustPut = model.updateFromDict(rec, f)
+        if mustPut:
+            rec.put()
         self.redirect("/")
 
 
@@ -449,14 +450,17 @@ class KikakuTouroku(BaseHandler):
         if "CL" not in kwds or not kwds["CL"]:
             kwds["CL"] = kaiin.name
 
-        rec = model.Kikaku(**kwds)
-        rec.creator = kaiin
-        rec.put()
 
-        # 古いレコードがあれば、削除。
-        old = getKikaku(self)
-        if old:
-            db.delete(old)
+        # 古いレコードがあれば、更新。
+        rec = getKikaku(self)
+        if rec:
+            mustPut = model.updateFromDict(rec, kwds)
+            if mustPut:
+                rec.put()
+        else:
+            rec = model.Kikaku(**kwds)
+            rec.creator = kaiin
+            rec.put()
 
         self.redirect("/")
 

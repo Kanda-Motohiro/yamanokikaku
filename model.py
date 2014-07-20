@@ -149,34 +149,20 @@ class Kaiin(db.Model):
         self.saikin0, self.saikin1, self.saikin2,
         self.kanyuuHoken)
 
-    def updateFromDict(self, f):
-        # なんか、自動的にやる方法ないんだっけ
-        if "seibetsu" in f:
-            self.seibetsu = f["seibetsu"]
-        if "tel" in f:
-            self.tel = f["tel"]
-        if "fax" in f:
-            self.fax = f["fax"]
-        if "mail" in f:
-            self.mail = f["mail"]
-        if "address" in f:
-            self.address = f["address"]
-        if "kinkyuName" in f:
-            self.kinkyuName = f["kinkyuName"]
-        if "kinkyuKankei" in f:
-            self.kinkyuKankei = f["kinkyuKankei"]
-        if "kinkyuAddress" in f:
-            self.kinkyuAddress = f["kinkyuAddress"]
-        if "kinkyuTel" in f:
-            self.kinkyuTel = f["kinkyuTel"]
-        if "saikin0" in f:
-            self.saikin0 = f["saikin0"]
-        if "saikin1" in f:
-            self.saikin1 = f["saikin1"]
-        if "saikin2" in f:
-            self.saikin2 = f["saikin2"]
-        if "kanyuuHoken" in f:
-            self.kanyuuHoken = f["kanyuuHoken"]
+
+def updateFromDict(obj, kwds):
+    updated = False
+    for key in kwds:
+        if not hasattr(obj, key):
+            continue
+        old = getattr(obj, key)
+        if old == kwds[key]:
+            continue
+        updated = True
+        #dbgprint("%s => %s" % (old, kwds[key]))
+        setattr(obj, key, kwds[key])
+
+    return updated
 
 
 blankKaiin = Kaiin(no=0, name=u"未登録")
